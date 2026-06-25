@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>플로팅 홀로그램 과학 시뮬레이터</title>
+    
+    <!-- Tailwind CSS (스타일링) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Three.js (3D 렌더링) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <!-- OrbitControls (마우스/터치로 3D 공간 회전) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #03030c; color: white; font-family: 'Pretendard', sans-serif; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 255, 255, 0.25);
+            box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
+        }
+
+        .tab-btn {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: #00ffff;
+            border-bottom: 2px solid #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+        }
+
+        /* 커스텀 슬라이더 스타일 */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #00ffff;
+            cursor: pointer;
+            margin-top: -7px;
+            box-shadow: 0 0 12px #00ffff;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 2px;
+        }
+        
+        /* 정보 툴팁 애니메이션 */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.2); }
+            50% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); }
+            100% { box-shadow: 0 0 5px rgba(0, 255, 255, 0.2); }
+        }
+        .glow-effect { animation: pulse-glow 2s infinite; }
+    </style>
+</head>
+<body>
+
+    <!-- 3D 렌더링 캔버스 -->
+    <div id="canvas-container"></div>
+
+    <!-- UI 레이어 -->
+    <div id="ui-container" class="p-4 md:p-6">
+        
+        <!-- 상단 헤더 및 모드 전환 -->
+        <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center w-full gap-4">
+            <div class="glass-panel rounded-xl p-4 w-full xl:w-auto">
+                <div class="flex items-center gap-3">
+                    <span class="inline-block w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
+                    <h1 class="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
+                        플로팅 홀로그램 과학 실험실
+                    </h1>
+                </div>
+                <p class="text-gray-300 text-xs mt-1">실시간 빛의 반사각 분석 및 가상 허상 시뮬레이터</p>
+            </div>
+
+            <!-- 모드 선택 탭 -->
+            <div class="glass-panel rounded-full px-5 py-2.5 flex gap-4 md:gap-6 text-xs md:text-sm font-semibold self-center xl:self-auto">
+                <button class="tab-btn active" data-mode="pepper">페퍼스의 유령 (반사법칙)</button>
+                <button class="tab-btn" data-mode="pyramid">4면 피라미드 (입체)</button>
+                <button class="tab-btn" data-mode="interference">진짜 홀로그램 (간섭)</button>
+            </div>
+        </header>
+
+        <!-- 중단 우측: 실시간 광학 각도 정보창 (페퍼스 모드 전용) -->
+        <div id="optical-stats" class="absolute right-4 top-28 glass-panel rounded-xl p-4 w-64 flex flex-col gap-3 transition-all duration-300 pointer-events-auto">
+            <h3 class="text-sm font-bold text-cyan-400 border-b border-cyan-500/30 pb-1.5 flex items-center gap-1.5">
+                📊 실시간 광학 상태 정보
+            </h3>
+            <div class="flex justify-between items-center text-xs">
+                <span class="text-gray-400">거울면 기울기:</span>
+                <span id="stat-mirror-angle" class="text-white font-mono font-bold">45.0°</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+                <span class="text-emerald-400 flex items-center gap-1">🟢 입사각 (<i>i</i>):</span>
+                <span id="stat-incident-angle" class="text-emerald-300 font-mono font-bold">45.0°</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+                <span class="text-yellow-400 flex items-center gap-1">🟡 반사각 (<i>r</i>):</span>
+                <span id="stat-reflection-angle" class="text-yellow-300 font-mono font-bold">45.0°</span>
+            </div>
+            <div class="border-t border-cyan-500/20 pt-2 text-[10px] text-cyan-200/80 leading-relaxed bg-cyan-950/20 p-2 rounded">
+                💡 <b>반사의 법칙 증명:</b> 어떤 각도에서도 입사각(<i>i</i>)과 반사각(<i>r</i>)은 항상 서로 같습니다.
+            </div>
+        </div>
+
+        <!-- 하단 컨트롤 및 상세 원리 설명 -->
+        <div class="flex flex-col lg:flex-row w-full gap-4 items-end mt-4">
+            
+            <!-- 원리 상세 설명 패널 (원리 설명 보강) -->
+            <div class="glass-panel rounded-xl p-5 w-full lg:w-2/5 flex-shrink-0 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-cyan-400"></div>
+                
+                <div class="flex justify-between items-center mb-2.5">
+                    <h2 id="info-title" class="text-lg font-bold text-cyan-300">페퍼스의 유령 (Pepper's Ghost)</h2>
+                    <button id="btn-show-academy" class="text-xs bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 px-2.5 py-1 rounded-md transition border border-cyan-400/30">
+                        📖 과학 교실 열기
+                    </button>
+                </div>
+
+                <div id="info-content" class="text-gray-300 text-xs md:text-sm leading-relaxed space-y-2">
+                    <!-- 자바스크립트에서 콘텐츠 동적 교체 -->
+                </div>
+            </div>
+
+            <!-- 컨트롤 및 인터랙션 옵션 -->
+            <div id="controls-panel" class="glass-panel rounded-xl p-5 w-full lg:w-auto flex-grow flex flex-col gap-4">
+                <h3 class="text-cyan-400 font-semibold text-sm">실험실 제어판</h3>
+                
+                <!-- 슬라이더 (각도 조절) -->
+                <div id="control-angle" class="flex flex-col gap-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-300">반사판 각도 조절</span>
+                        <span id="angle-val" class="text-cyan-300 font-bold">45°</span>
+                    </div>
+                    <input type="range" id="angle-slider" min="15" max="75" value="45">
+                </div>
+
+                <!-- 옵션 토글들 -->
+                <div class="flex flex-wrap gap-4 items-center">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-300">
+                        <input type="checkbox" id="toggle-rays" checked class="w-3.5 h-3.5 accent-cyan-400">
+                        빛의 경로 표시
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-300">
+                        <input type="checkbox" id="toggle-angles" checked class="w-3.5 h-3.5 accent-cyan-400">
+                        입사각/반사각 법선 표시
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-300">
+                        <input type="checkbox" id="toggle-auto" class="w-3.5 h-3.5 accent-cyan-400">
+                        자동 카메라 회전
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- 과학 원리 자세히 보기 모달 (Science Academy Popup) -->
+    <div id="academy-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-2xl w-full rounded-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto">
+            <button id="btn-close-academy" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">✕</button>
+            
+            <h2 class="text-2xl font-bold text-cyan-300 mb-4 border-b border-cyan-500/30 pb-2 flex items-center gap-2">
+                🎓 플로팅 홀로그램의 완벽한 과학적 원리
+            </h2>
+
+            <div class="space-y-5 text-gray-300 text-sm leading-relaxed">
+                <section>
+                    <h3 class="text-cyan-400 font-bold text-base mb-1">1. 빛의 반사 법칙 (Law of Reflection)</h3>
+                    <p>빛이 거울면이나 투명 필름에 부딪힐 때, 들어오는 각도인 <strong>입사각(<i>i</i>)</strong>과 반사되어 나가는 각도인 <strong>반사각(<i>r</i>)</strong>은 법선(평면에 수직인 선)을 기준으로 <strong>항상 일치</strong>합니다.</p>
+                    <div class="bg-cyan-950/40 border border-cyan-500/20 p-3 rounded-lg mt-1 font-mono text-xs flex justify-around text-center">
+                        <div>입사광선 ➔ <b>입사각(Angle of Incidence)</b></div>
+                        <div class="text-cyan-300"><b>=</b></div>
+                        <div><b>반사각(Angle of Reflection)</b> ➔ 반사광선</div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-cyan-400 font-bold text-base mb-1">2. 허상(Virtual Image)이 맺히는 원리</h3>
+                    <p>관찰자는 실제 빛이 꺾여서 유리에 반사되어 들어왔음에도 불구하고, 인간의 뇌는 <strong>"빛은 꺾이지 않고 직진해서 들어왔다"</strong>고 착각하게 됩니다.</p>
+                    <p>그 결과, 실제 영상이 있는 바닥면의 깊이와 동일한 대칭 거리에 해당하는 유리 너머 <strong>공중에 영상(허상)이 있는 것</strong>처럼 입체적으로 인식하게 됩니다.</p>
+                </section>
+
+                <section>
+                    <h3 class="text-cyan-400 font-bold text-base mb-1">3. 반사(Reflection)와 투과(Transmission)의 공존</h3>
+                    <p>플로팅 홀로그램의 투명 아크릴이나 유리는 빛의 일부는 <b>반사</b>하고 일부는 그대로 <b>투과</b>시킵니다. 이 성질 덕분에 유리 뒤편에 있는 실제 배경(물체)과 유리에 비친 허상이 공중에서 겹쳐 보임으로써 실제 허상이 공중에 떠 있는 것 같은 극적인 입체감을 제공합니다.</p>
+                </section>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="btn-close-academy-confirm" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-bold px-6 py-2.5 rounded-lg transition shadow-lg shadow-cyan-500/20">
+                    실험실로 돌아가기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Three.js 기본 설정 ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x03030c, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(16, 8, 22);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 60;
+        controls.minDistance = 5;
+
+        // 조명 환경 설정
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+        
+        const mainLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+        mainLight.position.set(10, 20, 10);
+        scene.add(mainLight);
+
+        const fillLight = new THREE.DirectionalLight(0xff00ff, 0.4);
+        fillLight.position.set(-10, -5, -10);
+        scene.add(fillLight);
+
+        // --- 2. 씬 그룹 구성 ---
+        const pepperGroup = new THREE.Group();
+        const pyramidGroup = new THREE.Group();
+        const interferenceGroup = new THREE.Group();
+        
+        scene.add(pepperGroup);
+        scene.add(pyramidGroup);
+        scene.add(interferenceGroup);
+
+        // 그리드 바닥 (공간 지각용)
+        const gridHelper = new THREE.GridHelper(50, 50, 0x00ffff, 0x111e38);
+        gridHelper.position.y = -6;
+        scene.add(gridHelper);
+
+        // --- 3. 공통 객체 및 광학 재질 ---
+        const hologramMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ffff,
+            emissive: 0x00aaff,
+            emissiveIntensity: 0.9,
+            transparent: true,
+            opacity: 0.75,
+            wireframe: true
+        });
+
+        const realMaterial = new THREE.MeshPhongMaterial({
+            color: 0x00ffff,
+            emissive: 0x0055ff,
+            emissiveIntensity: 1.2,
+        });
+
+        const glassMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.25,
+            roughness: 0.05,
+            transmission: 0.95,
+            thickness: 0.3,
+            side: THREE.DoubleSide
+        });
+
+        const animatedObjects = [];
+
+        // --- 4. 모드 1: 페퍼스의 유령 (Pepper's Ghost) 구축 ---
+        let pepperGlass, pepperVirtualObj, pepperRealObj;
+        let lineIncident, lineReflected, lineNormal, lineVirtual; // 각각의 독립광선들
+        let angleLabelGroup; // 각도를 3D 화면에 표시할 스프라이트 그룹
+        let normalArrowHelper;
+
+        function buildPepperScene() {
+            // 관찰자 (눈) 표현
+            const eyeGeo = new THREE.SphereGeometry(0.5, 32, 32);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const eye = new THREE.Mesh(eyeGeo, eyeMat);
+            eye.position.set(0, 2, 16);
+            pepperGroup.add(eye);
+            
+            const eyeLabel = createTextSprite("👀 관찰자의 눈 (시점)", "#ffffff", "rgba(0,0,0,0.8)");
+            eyeLabel.position.set(0, 3.2, 16);
+            pepperGroup.add(eyeLabel);
+
+            // 실제 디스플레이 장치
+            const screenGeo = new THREE.BoxGeometry(6.5, 0.2, 6.5);
+            const screenMat = new THREE.MeshPhongMaterial({ color: 0x151c30, specular: 0x00ffff });
+            const screen = new THREE.Mesh(screenGeo, screenMat);
+            screen.position.set(0, -4.5, 4);
+            pepperGroup.add(screen);
+
+            // 광원으로 쓰이는 3D 실제 오브젝트
+            const objGeo = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+            pepperRealObj = new THREE.Mesh(objGeo, realMaterial);
+            pepperRealObj.position.set(0, -3.5, 4);
+            pepperGroup.add(pepperRealObj);
+            animatedObjects.push(pepperRealObj);
+
+            const realLabel = createTextSprite("진짜 영상 (실제 물체/화면)", "#00ffff", "rgba(5, 15, 35, 0.85)");
+            realLabel.position.set(0, -2, 4);
+            pepperGroup.add(realLabel);
+
+            // 반사판 (초기 각도 45도)
+            const glassGeo = new THREE.PlaneGeometry(12, 12);
+            pepperGlass = new THREE.Mesh(glassGeo, glassMaterial);
+            pepperGlass.position.set(0, 0, 0);
+            pepperGlass.rotation.x = -Math.PI / 4; 
+            pepperGroup.add(pepperGlass);
+
+            // 관찰자 눈에 맺히는 가상의 허상 (Virtual Image)
+            pepperVirtualObj = new THREE.Mesh(objGeo, hologramMaterial);
+            pepperGroup.add(pepperVirtualObj);
+            animatedObjects.push(pepperVirtualObj);
+
+            const virtualLabel = createTextSprite("공중에 떠보이는 상 (허상)", "#ff00ff", "rgba(25, 5, 35, 0.85)");
+            virtualLabel.position.set(0, 2.5, -4);
+            pepperGroup.add(virtualLabel);
+
+            // 법선 및 입사/반사 광선 세분화 정의
+            lineIncident = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 3 }));
+            lineReflected = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffcc00, linewidth: 3 }));
+            lineNormal = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0x00ff00, dashSize: 0.5, gapSize: 0.3 }));
+            lineVirtual = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xff00ff, dashSize: 0.4, gapSize: 0.2 }));
+
+            pepperGroup.add(lineIncident);
+            pepperGroup.add(lineReflected);
+            pepperGroup.add(lineNormal);
+            pepperGroup.add(lineVirtual);
+
+            // 3D 텍스트 레이블 그룹
+            angleLabelGroup = new THREE.Group();
+            pepperGroup.add(angleLabelGroup);
+
+            updatePepperReflection(45);
+        }
+
+        // 반사법칙 시각화의 수학적 정밀 계산
+        function updatePepperReflection(angleDeg) {
+            if(!pepperGlass) return;
+
+            const angleRad = angleDeg * (Math.PI / 180);
+            pepperGlass.rotation.x = -angleRad;
+
+            // 1. 유리의 실시간 법선 벡터(Normal Vector) 산출
+            const normal = new THREE.Vector3(0, 0, 1);
+            normal.applyAxisAngle(new THREE.Vector3(1, 0, 0), -angleRad).normalize();
+
+            // 2. 대칭 법칙을 활용한 허상(Virtual Image) 위치 구하기
+            const P = pepperRealObj.position.clone();
+            const P0 = pepperGlass.position.clone();
+            const d = new THREE.Vector3().subVectors(P, P0).dot(normal);
+            const virtualPos = P.clone().sub(normal.clone().multiplyScalar(2 * d));
+            pepperVirtualObj.position.copy(virtualPos);
+
+            // 3. 눈과 반사판의 이상적인 반사교점(Intersection Point) 계산
+            const eyePos = new THREE.Vector3(0, 2, 16);
+            const rayDir = new THREE.Vector3().subVectors(eyePos, virtualPos).normalize();
+            const t = (new THREE.Vector3().subVectors(P0, virtualPos).dot(normal)) / (rayDir.dot(normal));
+            const intersectionPoint = virtualPos.clone().add(rayDir.multiplyScalar(t));
+
+            // 4. 입사 벡터 및 반사 벡터 분석
+            const incidentVec = new THREE.Vector3().subVectors(intersectionPoint, P).normalize();
+            const reflectedVec = new THREE.Vector3().subVectors(eyePos, intersectionPoint).normalize();
+
+            // 5. 입사각(i) 및 반사각(r) 정밀 측정 (법선과의 내적 활용)
+            // 평면을 뚫고 지나가는 법선 방향을 고려하여 역벡터로 내적
+            const minusIncident = incidentVec.clone().negate();
+            const cosIncident = minusIncident.dot(normal);
+            const angleIncRad = Math.acos(Math.min(Math.max(cosIncident, -1), 1));
+            const calculatedIncidentAngle = angleIncRad * (180 / Math.PI);
+
+            const cosReflection = reflectedVec.dot(normal);
+            const angleRefRad = Math.acos(Math.min(Math.max(cosReflection, -1), 1));
+            const calculatedReflectionAngle = angleRefRad * (180 / Math.PI);
+
+            // HTML UI 내 실시간 데이터 동기화
+            document.getElementById('stat-mirror-angle').innerText = parseFloat(angleDeg).toFixed(1) + '°';
+            document.getElementById('stat-incident-angle').innerText = calculatedIncidentAngle.toFixed(1) + '°';
+            document.getElementById('stat-reflection-angle').innerText = calculatedReflectionAngle.toFixed(1) + '°';
+
+            // 6. 개별 광선 라인 지오메트리 갱신
+            // [입사광선]: 실제 위치 -> 유리 교점 (녹색)
+            lineIncident.geometry.setFromPoints([P, intersectionPoint]);
+            // [반사광선]: 유리 교점 -> 관찰자 눈 (노란색/금색)
+            lineReflected.geometry.setFromPoints([intersectionPoint, eyePos]);
+            // [법선]: 유리 교점에서 수직으로 발사되는 가이드라인 (에메랄드)
+            const normalLineEnd = intersectionPoint.clone().add(normal.clone().multiplyScalar(4.5));
+            lineNormal.geometry.setFromPoints([intersectionPoint, normalLineEnd]);
+            lineNormal.computeLineDistances(); // 점선 적용용
+            // [가상 가이드라인]: 유리 교점 -> 가상 상 (마젠타)
+            lineVirtual.geometry.setFromPoints([intersectionPoint, virtualPos]);
+            lineVirtual.computeLineDistances();
+
+            // 7. 3D 입체 공간 상에 입사각 및 반사각 텍스트 스프라이트 배치
+            angleLabelGroup.clear();
+            
+            const showAngles = document.getElementById('toggle-angles').checked;
+            if (showAngles) {
+                // 입사각 라벨 위치 지정 (입사광선과 법선 중간 지점)
+                const incLabelPos = intersectionPoint.clone()
+                    .add(minusIncident.clone().multiplyScalar(2))
+                    .add(normal.clone().multiplyScalar(2))
+                    .multiplyScalar(0.5).add(intersectionPoint.clone().multiplyScalar(0.5));
+                const incSprite = createTextSprite(`입사각(i): ${calculatedIncidentAngle.toFixed(1)}°`, "#10b981", "rgba(5, 20, 10, 0.9)");
+                incSprite.position.copy(incLabelPos);
+                incSprite.scale.set(6, 1.5, 1);
+                angleLabelGroup.add(incSprite);
+
+                // 반사각 라벨 위치 지정 (반사광선과 법선 중간 지점)
+                const refLabelPos = intersectionPoint.clone()
+                    .add(reflectedVec.clone().multiplyScalar(2))
+                    .add(normal.clone().multiplyScalar(2))
+                    .multiplyScalar(0.5).add(intersectionPoint.clone().multiplyScalar(0.5));
+                const refSprite = createTextSprite(`반사각(r): ${calculatedReflectionAngle.toFixed(1)}°`, "#fbbf24", "rgba(25, 20, 5, 0.9)");
+                refSprite.position.copy(refLabelPos);
+                refSprite.scale.set(6, 1.5, 1);
+                angleLabelGroup.add(refSprite);
+                
+                // 법선 라벨 추가
+                const normalLabelPos = normalLineEnd.clone().add(new THREE.Vector3(0, 0.5, 0));
+                const normalSprite = createTextSprite("법선 (Normal Line)", "#22c55e", "rgba(0, 10, 0, 0.85)");
+                normalSprite.position.copy(normalLabelPos);
+                normalSprite.scale.set(6, 1.5, 1);
+                angleLabelGroup.add(normalSprite);
+            }
+        }
+
+
+        // --- 5. 모드 2: 4면 피라미드 (Smartphone Pyramid) 구축 ---
+        let pyramidVirtualObj;
+        
+        function buildPyramidScene() {
+            // 스마트폰 시뮬레이션용 바닥 디스플레이 패널
+            const phoneGeo = new THREE.BoxGeometry(11, 0.2, 11);
+            const phoneMat = new THREE.MeshPhongMaterial({ color: 0x0a0f1d, specular: 0x00ffff });
+            const phone = new THREE.Mesh(phoneGeo, phoneMat);
+            phone.position.set(0, -4.5, 0);
+            pyramidGroup.add(phone);
+
+            // 투명 아크릴 피라미드 (상단 반경 0.5, 하단 반경 5.5, 높이 5)
+            const pyramidGeo = new THREE.CylinderGeometry(0.5, 5.5, 5, 4, 1, true);
+            const pyramidMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, transparent: true, opacity: 0.3,
+                roughness: 0.02, transmission: 0.95, side: THREE.DoubleSide
+            });
+            const pyramid = new THREE.Mesh(pyramidGeo, pyramidMat);
+            pyramid.rotation.y = Math.PI / 4; // 네 면이 정방향을 보도록 회전
+            pyramid.position.set(0, -2, 0);
+            pyramidGroup.add(pyramid);
+
+            // 스마트폰 화면에 출력되는 4면의 원본 영상 소스 (오프셋 4곳 배치)
+            const objGeo = new THREE.OctahedronGeometry(1.1);
+            const positions = [
+                { x: 0, z: 3.5, ry: 0 },
+                { x: 0, z: -3.5, ry: Math.PI },
+                { x: 3.5, z: 0, ry: -Math.PI/2 },
+                { x: -3.5, z: 0, ry: Math.PI/2 }
+            ];
+
+            positions.forEach(pos => {
+                const realMesh = new THREE.Mesh(objGeo, realMaterial);
+                realMesh.position.set(pos.x, -4.2, pos.z);
+                realMesh.rotation.y = pos.ry;
+                pyramidGroup.add(realMesh);
+                animatedObjects.push(realMesh);
+            });
+
+            // 4면 반사가 모여 중앙에 재생하는 3D 가상 영상
+            pyramidVirtualObj = new THREE.Mesh(objGeo, hologramMaterial);
+            pyramidVirtualObj.position.set(0, -2, 0);
+            pyramidVirtualObj.scale.set(1.5, 1.5, 1.5);
+            pyramidGroup.add(pyramidVirtualObj);
+            animatedObjects.push(pyramidVirtualObj);
+
+            const pyLabel = createTextSprite("4개 영상 반사의 결합 (3D 효과)", "#00ffff", "rgba(10, 20, 40, 0.85)");
+            pyLabel.position.set(0, 2.5, 0);
+            pyramidGroup.add(pyLabel);
+        }
+
+        // --- 6. 모드 3: 빛의 간섭 진짜 홀로그램 (Interference) 구축 ---
+        let waveParticles;
+        const waveTime = { value: 0 };
+
+        function buildInterferenceScene() {
+            // 광선 생성 레이저 장비 소스
+            const laserMat = new THREE.MeshBasicMaterial({ color: 0xff1144 });
+            const laserGeo = new THREE.CylinderGeometry(0.2, 0.2, 2.5);
+            
+            // 참조파 레이저 (빛의 파장이 변치 않는 완전한 레이저 광)
+            const refLaser = new THREE.Mesh(laserGeo, laserMat);
+            refLaser.position.set(-9, 5, 0);
+            refLaser.rotation.z = -Math.PI / 3.5;
+            interferenceGroup.add(refLaser);
+            
+            const refLaserLabel = createTextSprite("참조파 (Reference Beam)", "#ff2266", "rgba(20,0,5,0.85)");
+            refLaserLabel.position.set(-9, 7, 0);
+            interferenceGroup.add(refLaserLabel);
+
+            // 물체파 레이저
+            const objLaser = new THREE.Mesh(laserGeo, laserMat);
+            objLaser.position.set(-9, -5, 0);
+            objLaser.rotation.z = Math.PI / 3.5;
+            interferenceGroup.add(objLaser);
+
+            const objLaserLabel = createTextSprite("물체파 (Object Beam)", "#ffdd00", "rgba(20,15,0,0.85)");
+            objLaserLabel.position.set(-9, -7, 0);
+            interferenceGroup.add(objLaserLabel);
+
+            // 기록 대상 물체 (입체 정보를 수집할 타겟)
+            const objGeo = new THREE.DodecahedronGeometry(1.6);
+            const targetObj = new THREE.Mesh(objGeo, new THREE.MeshPhongMaterial({color: 0x94a3b8, shininess: 80}));
+            targetObj.position.set(-1, -1, 0);
+            interferenceGroup.add(targetObj);
+            animatedObjects.push(targetObj);
+
+            // 홀로그래피 감광용 필름 건판
+            const plateGeo = new THREE.BoxGeometry(0.3, 10, 10);
+            const plateMat = new THREE.MeshPhysicalMaterial({
+                color: 0x0ea5e9, transparent: true, opacity: 0.8,
+                roughness: 0.1, transmission: 0.5
+            });
+            const plate = new THREE.Mesh(plateGeo, plateMat);
+            plate.position.set(8, 0, 0);
+            interferenceGroup.add(plate);
+
+            const pLabel = createTextSprite("간섭 무늬가 기록될 필름 건판", "#38bdf8", "rgba(0, 15, 30, 0.85)");
+            pLabel.position.set(8, 6, 0);
+            interferenceGroup.add(pLabel);
+
+            // 파동을 시뮬레이션할 수백개의 포인트 파티클 생성
+            const particleCount = 1200;
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = new Float32Array(particleCount * 3);
+            const pPhase = new Float32Array(particleCount);
+            const pType = new Float32Array(particleCount); // 0: 참조파, 1: 물체파
+
+            for(let i=0; i<particleCount; i++) {
+                pPhase[i] = Math.random() * Math.PI * 2;
+                const type = Math.random() > 0.5 ? 0 : 1;
+                pType[i] = type;
+                
+                if(type === 0) {
+                    // 참조파: 필름을 향해 대각선 상단에서 직접 낙하 및 진행
+                    pPos[i*3] = -8 + Math.random() * 16;
+                    pPos[i*3+1] = 5 - (pPos[i*3] + 8) * 0.4 + (Math.random()-0.5)*1.5;
+                    pPos[i*3+2] = (Math.random()-0.5) * 8;
+                } else {
+                    // 물체파: 레이저 -> 물체 충돌 -> 필름으로 산란
+                    pPos[i*3] = -1 + Math.random() * 9;
+                    pPos[i*3+1] = -1 + (pPos[i*3] + 1) * 0.1 + (Math.random()-0.5)*2;
+                    pPos[i*3+2] = (Math.random()-0.5) * 8;
+                }
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            pGeo.setAttribute('phase', new THREE.BufferAttribute(pPhase, 1));
+            pGeo.setAttribute('ptype', new THREE.BufferAttribute(pType, 1));
+
+            const pMat = new THREE.PointsMaterial({ 
+                color: 0xff3366, 
+                size: 0.18, 
+                transparent: true, 
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending 
+            });
+            waveParticles = new THREE.Points(pGeo, pMat);
+            interferenceGroup.add(waveParticles);
+        }
+
+        // 파동 시네마틱 애니메이션 엔진
+        function animateWaves() {
+            if(!waveParticles || interferenceGroup.visible === false) return;
+            
+            const positions = waveParticles.geometry.attributes.position.array;
+            const phases = waveParticles.geometry.attributes.phase.array;
+            const types = waveParticles.geometry.attributes.ptype.array;
+            
+            waveTime.value += 0.08;
+
+            for(let i=0; i<positions.length/3; i++) {
+                positions[i*3] += 0.12; 
+
+                // 필름 경계 도달 시 재생성 루프
+                if(positions[i*3] > 8) {
+                    if(types[i] === 0) {
+                        positions[i*3] = -8;
+                        positions[i*3+1] = 5;
+                    } else {
+                        positions[i*3] = -1;
+                        positions[i*3+1] = -1;
+                    }
+                }
+
+                // 사인함수 기반 3차원 파형 진동
+                positions[i*3+1] += Math.sin(positions[i*3] * 1.8 + phases[i] + waveTime.value) * 0.03;
+            }
+            waveParticles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // --- 7. 유틸리티: 2D 라벨용 Canvas 고해상도 텍스트 스프라이트 생성 ---
+        function createTextSprite(message, textColor = "#00ffff", bgColor = "rgba(0, 0, 0, 0.7)") {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 512;
+            canvas.height = 128;
+            
+            // 둥근 사각형 배경 드로잉
+            context.fillStyle = bgColor;
+            context.beginPath();
+            context.roundRect(10, 10, 492, 108, 16);
+            context.fill();
+
+            // 테두리 엠보싱 효과
+            context.strokeStyle = textColor;
+            context.lineWidth = 2;
+            context.stroke();
+
+            // 텍스트 출력
+            context.font = "Bold 26px Pretendard, sans-serif";
+            context.fillStyle = textColor;
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText(message, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(6, 1.5, 1);
+            return sprite;
+        }
+
+
+        // --- 8. UI 인터랙션 및 교안 텍스트 자료화 ---
+        const infoData = {
+            pepper: {
+                title: "페퍼스의 유령 & 빛의 반사 법칙",
+                content: `
+                    <p>유리 반사면을 기준으로 물체에서 나오는 <strong>입사광선</strong>과 눈으로 향하는 <strong>반사광선</strong>은 완벽한 수학적 법칙을 따릅니다.</p>
+                    <p class="mt-1">거울면과 직교하는 가상의 점선인 <strong class="text-emerald-400">법선</strong>을 기준으로 측정한 <strong class="text-emerald-400">입사각(<i>i</i>)</strong>과 <strong class="text-yellow-400">반사각(<i>r</i>)</strong>은 어떤 상황에서도 동일한 <strong class="text-cyan-300">반사의 법칙(<i>i = r</i>)</strong>을 성립시킵니다.</p>
+                    <p class="mt-2 text-xs text-gray-400">※ 조작 슬라이더를 움직여 각도가 바뀌어도 입사각과 반사각이 동일하게 계속 변하는 신기한 기하학적 성질을 직접 확인해 보세요.</p>
+                `
+            },
+            pyramid: {
+                title: "4면 피라미드 & 입체 영상",
+                content: `
+                    <p>스마트폰 화면에 4개의 대칭 방향(앞, 뒤, 왼쪽, 오른쪽) 영상을 띄워 사용하는 가장 미니멀한 플로팅 홀로그램 장치입니다.</p>
+                    <p class="mt-1">45도로 경사진 투명 피라미드의 네 면이 각각 자신에게 향하는 방향의 모니터 불빛을 위쪽 눈동자를 향해 똑같이 반사시킵니다.</p>
+                    <p class="mt-1">이 네 면의 빛 반사가 공중의 한곳으로 융합되며, 보는 사람이 어느 각도(360도)에서 관찰하더라도 가상의 입체 물체가 정중앙에 부유하는 것처럼 실감 나게 보입니다.</p>
+                `
+            },
+            interference: {
+                title: "참조파와 물체파의 간섭 현상 (진짜 홀로그램)",
+                content: `
+                    <p>플로팅 홀로그램은 단순 반사를 이용한 착시(허상)이지만, <strong>진짜 홀로그램(Hologram)</strong>은 물리 광학의 극치입니다.</p>
+                    <p class="mt-1">아무 방해 없이 완벽하게 직진하는 수많은 전자기파 빛인 <span class="text-pink-400">참조파</span>와 물체 표면에 반사되어 물체의 고유 정보를 품고 날아오는 <span class="text-yellow-400">물체파</span>가 충돌하면 마이크로 간섭 무늬가 생성됩니다.</p>
+                    <p class="mt-1">필름 건판에 이 독창적인 물결 간섭 흔적을 정밀 기록함으로써, 훗날 빛을 비췄을 때 실제 깊이 정보를 가진 영구 입체를 허공에 만들어 냅니다.</p>
+                `
+            }
+        };
+
+        let currentMode = 'pepper';
+        const infoTitle = document.getElementById('info-title');
+        const infoContent = document.getElementById('info-content');
+        const controlAngle = document.getElementById('control-angle');
+        const angleSlider = document.getElementById('angle-slider');
+        const angleVal = document.getElementById('angle-val');
+        const toggleRays = document.getElementById('toggle-rays');
+        const toggleAngles = document.getElementById('toggle-angles');
+        const toggleAuto = document.getElementById('toggle-auto');
+        const opticalStats = document.getElementById('optical-stats');
+
+        // 모드 전환 프로세서
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+
+            pepperGroup.visible = (mode === 'pepper');
+            pyramidGroup.visible = (mode === 'pyramid');
+            interferenceGroup.visible = (mode === 'interference');
+
+            infoTitle.innerHTML = infoData[mode].title;
+            infoContent.innerHTML = infoData[mode].content;
+
+            // 시뮬레이션 환경 제어 및 카메라 뷰포트 최적화
+            if(mode === 'pepper') {
+                controlAngle.style.display = 'flex';
+                opticalStats.style.display = 'flex';
+                camera.position.set(16, 8, 22);
+                updatePepperReflection(angleSlider.value);
+            } else if (mode === 'pyramid') {
+                controlAngle.style.display = 'none';
+                opticalStats.style.display = 'none';
+                camera.position.set(0, 4, 18);
+            } else {
+                controlAngle.style.display = 'none';
+                opticalStats.style.display = 'none';
+                camera.position.set(4, 3, 22);
+            }
+            controls.target.set(0, 0, 0);
+        }
+
+        // 이벤트 리스너 마운트
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => switchMode(e.target.dataset.mode));
+        });
+
+        angleSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            angleVal.innerText = val + '°';
+            updatePepperReflection(val);
+        });
+
+        toggleRays.addEventListener('change', (e) => {
+            const show = e.target.checked;
+            if(lineIncident) lineIncident.visible = show;
+            if(lineReflected) lineReflected.visible = show;
+            if(lineVirtual) lineVirtual.visible = show;
+        });
+
+        toggleAngles.addEventListener('change', (e) => {
+            const show = e.target.checked;
+            if(lineNormal) lineNormal.visible = show;
+            if(angleLabelGroup) angleLabelGroup.visible = show;
+            updatePepperReflection(angleSlider.value);
+        });
+
+        // 과학실 안내창 제어부
+        const academyModal = document.getElementById('academy-modal');
+        document.getElementById('btn-show-academy').addEventListener('click', () => {
+            academyModal.classList.remove('hidden');
+        });
+        
+        const closeAcademy = () => academyModal.classList.add('hidden');
+        document.getElementById('btn-close-academy').addEventListener('click', closeAcademy);
+        document.getElementById('btn-close-academy-confirm').addEventListener('click', closeAcademy);
+
+
+        // --- 9. 엔진 시동 및 메인 프레임 루프 ---
+        buildPepperScene();
+        buildPyramidScene();
+        buildInterferenceScene();
+        switchMode('pepper');
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            controls.update();
+
+            // 3D 홀로그램 자체적인 시그니처 궤도 자전회전
+            animatedObjects.forEach(obj => {
+                obj.rotation.x += 0.4 * delta;
+                obj.rotation.y += 0.7 * delta;
+            });
+
+            // 자동 공전 회전
+            if (toggleAuto.checked) {
+                const speed = 0.4 * delta;
+                const x = camera.position.x;
+                const z = camera.position.z;
+                camera.position.x = x * Math.cos(speed) - z * Math.sin(speed);
+                camera.position.z = z * Math.cos(speed) + x * Math.sin(speed);
+                camera.lookAt(0,0,0);
+            }
+
+            // 실시간 간섭 무늬 파동 제어
+            if(currentMode === 'interference') {
+                animateWaves();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+    </script>
+</body>
+</html>
