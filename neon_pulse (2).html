@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>네온 펄스 (Neon Pulse) - 리듬 액션 러너</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Pretendard & Orbitron) -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #05050c;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* 네온 글로우 효과 */
+        .neon-text-pink {
+            text-shadow: 0 0 5px #ff007f, 0 0 15px #ff007f, 0 0 30px #ff007f;
+        }
+        .neon-text-blue {
+            text-shadow: 0 0 5px #00f0ff, 0 0 15px #00f0ff, 0 0 30px #00f0ff;
+        }
+        .neon-border-pink {
+            box-shadow: 0 0 10px #ff007f, inset 0 0 10px #ff007f;
+            border-color: #ff007f;
+        }
+        .neon-border-blue {
+            box-shadow: 0 0 10px #00f0ff, inset 0 0 10px #00f0ff;
+            border-color: #00f0ff;
+        }
+        /* 커스텀 스크롤바 숨기기 */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        /* 피버 이펙트 */
+        @keyframes fever-glow {
+            0%, 100% { box-shadow: 0 0 15px #ff007f; border-color: #ff007f; }
+            50% { box-shadow: 0 0 30px #00f0ff; border-color: #00f0ff; }
+        }
+        .fever-active {
+            animation: fever-glow 1s infinite;
+        }
+        /* 화면 흔들림 효과 클래스 */
+        .shake {
+            animation: shake-anim 0.2s ease-in-out infinite;
+        }
+        @keyframes shake-anim {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-3px, 2px); }
+            40% { transform: translate(3px, -1px); }
+            60% { transform: translate(-2px, -2px); }
+            80% { transform: translate(2px, 1px); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen text-white p-2">
+
+    <!-- 게임 전체 컨테이너 -->
+    <div id="screen-wrapper" class="relative w-full max-w-4xl bg-gray-950 border-2 border-gray-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col" style="aspect-ratio: 16/9;">
+        
+        <!-- ================= [1] 시작 화면 (Start Screen) ================= -->
+        <div id="start-screen" class="absolute inset-0 z-20 flex flex-col items-center justify-between p-6 bg-gradient-to-br from-slate-950 via-purple-950 to-blue-950">
+            <!-- 타이틀 영역 -->
+            <div class="text-center mt-6">
+                <h1 class="text-5xl md:text-7xl font-black font-orbitron tracking-wider text-pink-500 neon-text-pink uppercase animate-pulse">
+                    NEON PULSE
+                </h1>
+                <p class="text-blue-400 text-sm md:text-lg font-orbitron tracking-widest mt-2 neon-text-blue">
+                    RHYTHM ACTION RUNNER
+                </p>
+            </div>
+
+            <!-- 플레이어 캐릭터 프리뷰 및 최고 점수 -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="bg-black/40 px-6 py-2 rounded-full border border-pink-500/30 text-xs md:text-sm text-pink-300">
+                    🏆 최고 점수: <span id="start-highscore" class="font-bold font-orbitron">0</span>
+                </div>
+                <div class="bg-black/40 px-6 py-2 rounded-full border border-blue-500/30 text-xs md:text-sm text-blue-300 mt-1">
+                    🪙 보유 큐브 코인: <span id="start-coins" class="font-bold font-orbitron">0</span>
+                </div>
+            </div>
+
+            <!-- 조작법 안내 -->
+            <div class="hidden md:flex gap-10 text-gray-400 text-xs text-center bg-black/45 p-4 rounded-xl border border-white/10 max-w-2xl">
+                <div>
+                    <span class="bg-gray-800 px-3 py-1 rounded text-white border border-gray-600 font-bold">Space</span> 또는 
+                    <span class="bg-gray-800 px-3 py-1 rounded text-white border border-gray-600 font-bold">↑</span>
+                    <p class="mt-2 text-gray-300 font-medium">점프 (이단 점프 가능)</p>
+                </div>
+                <div>
+                    <span class="bg-gray-800 px-3 py-1 rounded text-white border border-gray-600 font-bold">↓</span> 또는
+                    <span class="bg-gray-800 px-3 py-1 rounded text-white border border-gray-600 font-bold">Shift</span>
+                    <p class="mt-2 text-gray-300 font-medium">슬라이딩</p>
+                </div>
+                <div>
+                    <span class="text-yellow-400 font-bold">🧲 자석 아이템</span> / <span class="text-blue-400 font-bold">🛡️ 실드 아이템</span>
+                    <p class="mt-2 text-gray-300 font-medium">자동 코인 수집 / 충돌 1회 방어!</p>
+                </div>
+                <div>
+                    <span class="text-red-400 font-bold">⚡ 아슬아슬 회피</span>
+                    <p class="mt-2 text-gray-300 font-medium">장애물 근접 회피 시 보너스 폭발!</p>
+                </div>
+            </div>
+
+            <!-- 하단 버튼들 -->
+            <div class="flex gap-4 w-full max-w-md mb-6">
+                <button id="btn-shop" class="flex-1 bg-purple-900/60 hover:bg-purple-800 border-2 border-purple-500 text-purple-200 py-3 rounded-2xl font-bold transition-all transform hover:scale-105 active:scale-95 text-sm md:text-base">
+                    🛒 스킨 상점
+                </button>
+                <button id="btn-start" class="flex-[2] bg-pink-600 hover:bg-pink-500 border-2 border-pink-400 text-white py-3 rounded-2xl font-black text-lg md:text-xl tracking-wide transition-all transform hover:scale-105 active:scale-95 neon-border-pink">
+                    GAME START
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= [2] 인게임 HUD & 캔버스 ================= -->
+        <div id="game-container" class="relative w-full h-full hidden">
+            <!-- 캔버스 (게임 렌더링) -->
+            <canvas id="game-canvas" class="w-full h-full block"></canvas>
+
+            <!-- 게임 HUD 상단 -->
+            <div class="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+                
+                <!-- 스테이지 표시 & 점수 -->
+                <div class="flex gap-2">
+                    <div class="flex flex-col bg-black/60 p-3 rounded-xl border border-pink-500/30 backdrop-blur-sm min-w-[70px] text-center">
+                        <span class="text-[10px] text-pink-400 font-orbitron">STAGE</span>
+                        <span id="hud-stage" class="text-xl font-black font-orbitron text-pink-300">1</span>
+                    </div>
+                    <div class="flex flex-col bg-black/60 p-3 rounded-xl border border-blue-500/30 backdrop-blur-sm min-w-[120px]">
+                        <span class="text-xs text-blue-400 font-orbitron">SCORE</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="hud-score" class="text-2xl font-black font-orbitron text-white">00000</span>
+                            <span id="hud-multiplier" class="text-sm font-bold font-orbitron text-pink-400">x1.0</span>
+                        </div>
+                    </div>
+                    <!-- 실시간 콤보 HUD -->
+                    <div id="hud-combo-container" class="flex flex-col bg-black/60 p-3 rounded-xl border border-yellow-500/30 backdrop-blur-sm opacity-0 transition-opacity duration-200">
+                        <span class="text-[10px] text-yellow-400 font-orbitron">COMBO</span>
+                        <span id="hud-combo" class="text-xl font-black font-orbitron text-yellow-300">0</span>
+                    </div>
+                </div>
+
+                <!-- 스테이지 진행도 & 피버 게이지 -->
+                <div class="flex flex-col items-center w-1/3 gap-1.5">
+                    <!-- 스테이지 목표 거리 게이지 -->
+                    <div class="w-full bg-black/70 px-3 py-1.5 rounded-lg border border-gray-800 flex items-center gap-2">
+                        <span class="text-[9px] text-gray-400 font-bold shrink-0">GOAL</span>
+                        <div class="flex-1 bg-gray-900 h-2 rounded-full overflow-hidden p-0.5 border border-white/5">
+                            <div id="hud-progress-bar" class="bg-gradient-to-r from-blue-500 to-green-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <!-- 피버 게이지 -->
+                    <div class="w-full flex flex-col items-center bg-black/60 p-2 rounded-xl border border-purple-500/30 backdrop-blur-sm">
+                        <span class="text-[10px] text-purple-300 font-bold tracking-widest mb-1 font-orbitron">FEVER PULSE</span>
+                        <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-purple-500/50">
+                            <div id="hud-fever-bar" class="bg-gradient-to-r from-pink-500 to-purple-500 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 코인 & 일시정지 -->
+                <div class="flex items-center gap-3">
+                    <!-- 아이템 활성화 상태 알림 아이콘 -->
+                    <div class="flex gap-1.5">
+                        <div id="hud-shield-indicator" class="bg-blue-900/85 border border-blue-400 p-2 rounded-lg hidden flex-col items-center justify-center">
+                            <span class="text-[10px] text-blue-300 font-bold">🛡️ SHIELD</span>
+                        </div>
+                        <div id="hud-magnet-indicator" class="bg-cyan-900/85 border border-cyan-400 p-2 rounded-lg hidden flex-col items-center justify-center">
+                            <span class="text-[10px] text-cyan-300 font-bold">🧲 MAGNET</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col bg-black/60 p-3 rounded-xl border border-yellow-500/30 backdrop-blur-sm">
+                        <span class="text-xs text-yellow-400 font-orbitron">COINS</span>
+                        <span id="hud-coins" class="text-xl font-bold font-orbitron text-yellow-300">0</span>
+                    </div>
+                    <button id="btn-pause" class="pointer-events-auto bg-gray-900/80 hover:bg-gray-800 p-3 rounded-xl border border-gray-700 transition-colors">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 모바일 터치 입력 가이드 / 오버레이 -->
+            <div class="absolute bottom-4 left-4 right-4 md:hidden flex gap-4 justify-between pointer-events-none">
+                <div class="flex-1 bg-black/40 border border-blue-500/20 rounded-2xl py-6 text-center backdrop-blur-[1px]">
+                    <span class="text-blue-400 font-bold text-sm block">왼쪽 화면 터치</span>
+                    <span class="text-xs text-gray-400">점프 / 이단 점프</span>
+                </div>
+                <div class="flex-1 bg-black/40 border border-pink-500/20 rounded-2xl py-6 text-center backdrop-blur-[1px]">
+                    <span class="text-pink-400 font-bold text-sm block">오른쪽 화면 터치</span>
+                    <span class="text-xs text-gray-400">슬라이딩</span>
+                </div>
+            </div>
+            
+            <!-- 중력 반전 경고 레이블 -->
+            <div id="gravity-warning" class="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-purple-900/90 border border-purple-500 px-4 py-2 rounded-full text-xs font-bold text-purple-200 font-orbitron opacity-0 transition-opacity duration-300 pointer-events-none flex items-center gap-2">
+                <span class="animate-ping w-2.5 h-2.5 rounded-full bg-purple-400 inline-block"></span>
+                GRAVITY INVERTED!
+            </div>
+        </div>
+
+        <!-- ================= [3] 스킨 상점 화면 (Shop Screen) ================= -->
+        <div id="shop-screen" class="absolute inset-0 z-30 hidden flex-col p-6 bg-slate-950">
+            <!-- 헤더 -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-black font-orbitron text-purple-400 tracking-wider">CUBE UPGRADE SHOP</h2>
+                <div class="flex items-center gap-2 bg-purple-950/50 px-4 py-2 rounded-full border border-purple-500/30">
+                    <span class="text-yellow-400 text-sm">🪙 코인:</span>
+                    <span id="shop-coin-count" class="font-bold font-orbitron text-yellow-300">0</span>
+                </div>
+            </div>
+
+            <!-- 스킨 리스트 컨테이너 -->
+            <div id="skin-list" class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 overflow-y-auto pr-1">
+                <!-- 스킨 카드가 JS에 의해 동적으로 생성됩니다 -->
+            </div>
+
+            <!-- 하단 뒤로가기 -->
+            <div class="mt-6 flex justify-end">
+                <button id="btn-shop-close" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-8 py-3 rounded-xl border border-gray-600 transition-all active:scale-95">
+                    뒤로가기
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= [4] 일시정지 오버레이 (Pause Screen) ================= -->
+        <div id="pause-screen" class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-black/85 backdrop-blur-sm">
+            <h2 class="text-4xl font-black font-orbitron text-blue-400 mb-8 neon-text-blue">GAME PAUSED</h2>
+            <div class="flex flex-col gap-4 w-64">
+                <button id="btn-resume" class="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-transform active:scale-95">
+                    게임 계속하기
+                </button>
+                <button id="btn-quit" class="bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 rounded-xl font-bold border border-gray-700 transition-transform active:scale-95">
+                    메인 메뉴로
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= [5] 게임오버 화면 (Game Over Screen) ================= -->
+        <div id="gameover-screen" class="absolute inset-0 z-20 hidden flex-col items-center justify-center p-6 bg-black/90">
+            <h2 class="text-5xl font-black font-orbitron text-red-500 mb-2 neon-text-pink animate-bounce">CRASHED!</h2>
+            <p class="text-gray-400 text-sm mb-6">시스템 그리드에서 탈락했습니다.</p>
+
+            <!-- 스코어 요약 -->
+            <div class="grid grid-cols-2 gap-4 w-full max-w-sm bg-gray-900/50 p-6 rounded-2xl border border-gray-800 mb-8 text-center">
+                <div>
+                    <span class="text-xs text-gray-400 block mb-1">획득 점수</span>
+                    <span id="final-score" class="text-2xl font-black font-orbitron text-pink-400">0</span>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-400 block mb-1">획득 코인</span>
+                    <span id="final-coins" class="text-2xl font-black font-orbitron text-yellow-300">+0</span>
+                </div>
+            </div>
+
+            <!-- 액션 버튼 -->
+            <div class="flex gap-4 w-full max-w-sm">
+                <button id="btn-restart" class="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-3 rounded-xl font-black text-lg transition-transform active:scale-95 neon-border-pink">
+                    다시 도전
+                </button>
+                <button id="btn-go-home" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-xl font-bold border border-gray-700 transition-transform active:scale-95">
+                    메인으로
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- 게임 핵심 로직 (JS) -->
+    <!-- ================================================================= -->
+    <script>
+        // --- [설정 및 로컬 스토리지 데이터] ---
+        const SKIN_DATA = [
+            { id: 'neon_blue', name: '네온 블루 (기본)', color: '#00f0ff', shadowColor: '#0055ff', price: 0, unlocked: true },
+            { id: 'neon_pink', name: '네온 핑크', color: '#ff007f', shadowColor: '#ff0033', price: 50, unlocked: false },
+            { id: 'cyber_gold', name: '골든 사이버', color: '#ffd700', shadowColor: '#ff8800', price: 150, unlocked: false },
+            { id: 'matrix_green', name: '코드 그린', color: '#39ff14', shadowColor: '#00aa00', price: 300, unlocked: false },
+            { id: 'rainbow_pulse', name: '무지개 펄스', color: 'rainbow', shadowColor: '#ffffff', price: 600, unlocked: false }
+        ];
+
+        // 각 스테이지별 테마 색상 및 속도
+        const STAGE_CONFIG = {
+            1: { color: '#00f0ff', secondary: '#0055ff', speed: 7.0, bpm: 125, distance: 400, name: 'GRID STATION' },
+            2: { color: '#ff007f', secondary: '#ff0033', speed: 8.5, bpm: 135, distance: 550, name: 'VIRTUAL ROAD' },
+            3: { color: '#39ff14', secondary: '#00aa00', speed: 10.0, bpm: 145, distance: 700, name: 'OVERDRIVE SYSTEM' },
+            4: { color: '#ffd700', secondary: '#ff8800', speed: 11.5, bpm: 155, distance: 850, name: 'GOLDEN GRID' },
+            5: { color: '#b026ff', secondary: '#ff00d4', speed: 13.0, bpm: 165, distance: 99999, name: 'NEON COSMOS' }
+        };
+
+        let gameData = {
+            highScore: 0,
+            coins: 0,
+            unlockedSkins: ['neon_blue'],
+            equippedSkin: 'neon_blue'
+        };
+
+        // 로컬 스토리지 로드
+        function loadGameData() {
+            const saved = localStorage.getItem('neon_pulse_save');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    gameData = { ...gameData, ...parsed };
+                    // 스킨 동기화
+                    SKIN_DATA.forEach(skin => {
+                        if (gameData.unlockedSkins.includes(skin.id)) {
+                            skin.unlocked = true;
+                        }
+                    });
+                } catch (e) {
+                    console.error("데이터 로드 에러:", e);
+                }
+            }
+        }
+
+        // 로컬 스토리지 저장
+        function saveGameData() {
+            localStorage.setItem('neon_pulse_save', JSON.stringify(gameData));
+        }
+
+        // --- [사운드 엔진 (Web Audio API)] ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.beatInterval = null;
+                this.bpm = 125;
+                this.step = 0;
+            }
+
+            init() {
+                if (this.ctx) return;
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            setBPM(newBPM) {
+                this.bpm = newBPM;
+            }
+
+            // 효과음 - 점프음
+            playJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.15);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            // 효과음 - 슬라이딩음
+            playSlide() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.3);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.3);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            // 효과음 - 점프패드 슈퍼점프음
+            playSuperJump() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.4);
+
+                gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.4);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.4);
+            }
+
+            // 효과음 - 포탈 통과음 (중력 변전)
+            playPortal() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(200, this.ctx.currentTime + 0.4);
+
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.4);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.4);
+            }
+
+            // 효과음 - 코인 획득
+            playCoin() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sine';
+                const now = this.ctx.currentTime;
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.setValueAtTime(880.00, now + 0.08); // A5
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.2);
+
+                osc.start();
+                osc.stop(now + 0.2);
+            }
+
+            // 효과음 - 아이템 획득 (쉴드, 자석)
+            playItemGet() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sine';
+                const now = this.ctx.currentTime;
+                osc.frequency.setValueAtTime(440.00, now); // A4
+                osc.frequency.setValueAtTime(554.37, now + 0.1); // C#5
+                osc.frequency.setValueAtTime(659.25, now + 0.2); // E5
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.4);
+
+                osc.start();
+                osc.stop(now + 0.4);
+            }
+
+            // 효과음 - 쉴드 폭발/파괴
+            playShieldBreak() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'triangle';
+                const now = this.ctx.currentTime;
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.35);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.35);
+
+                osc.start();
+                osc.stop(now + 0.35);
+            }
+
+            // 효과음 - 아슬아슬 회피 성공 (Near Miss)
+            playNearMiss() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sine';
+                const now = this.ctx.currentTime;
+                osc.frequency.setValueAtTime(987.77, now); // B5
+                osc.frequency.setValueAtTime(1318.51, now + 0.05); // E6
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.2);
+
+                osc.start();
+                osc.stop(now + 0.2);
+            }
+
+            // 효과음 - 충돌 패배
+            playCrash() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.6);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.6);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.6);
+            }
+
+            // 효과음 - 스테이지 클리어
+            playStageClear() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                
+                // 도레미파솔 아르페지오 신스 연출
+                const notes = [523.25, 587.33, 659.25, 698.46, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0, now + idx * 0.08 + 0.3);
+
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.3);
+                });
+            }
+
+            // 배경음악(BGM) 시퀀서 - 사이버펑크 루프 재생
+            startBGM() {
+                this.init();
+                if (this.beatInterval) clearInterval(this.beatInterval);
+
+                const getIntervalMs = () => (60 / this.bpm) * 1000 / 2; // 8비트 단위 템포
+                this.beatInterval = setInterval(() => {
+                    this.playSequencerStep();
+                }, getIntervalMs());
+            }
+
+            stopBGM() {
+                if (this.beatInterval) {
+                    clearInterval(this.beatInterval);
+                    this.beatInterval = null;
+                }
+            }
+
+            playSequencerStep() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const isFever = gameEngine && gameEngine.isFever;
+
+                // 1. 킥 드럼 (모든 정박 1, 3, 5, 7...)
+                if (this.step % 2 === 0) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.frequency.setValueAtTime(130, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                }
+
+                // 2. 일렉 베이스 멜로디 루프
+                // 간단한 신스베이스 음계 진행
+                const baseMelody = [55, 55, 65.4, 65.4, 73.4, 73.4, 48.9, 48.9]; // A1, C2, D2, G1 대역 주파수 환산
+                const noteFreq = baseMelody[Math.floor(this.step / 2) % baseMelody.length];
+                
+                const bassOsc = this.ctx.createOscillator();
+                const bassGain = this.ctx.createGain();
+                bassOsc.connect(bassGain);
+                bassGain.connect(this.ctx.destination);
+
+                bassOsc.type = 'sawtooth';
+                bassOsc.frequency.setValueAtTime(noteFreq, now);
+                
+                bassGain.gain.setValueAtTime(0.08, now);
+                bassGain.gain.linearRampToValueAtTime(0, now + 0.2);
+                
+                bassOsc.start(now);
+                bassOsc.stop(now + 0.25);
+
+                // 3. 피버 모드일 때 추가 신시사이저 멜로디 (비행하는 느낌!)
+                if (isFever && this.step % 4 === 2) {
+                    const feverNotes = [440, 523.25, 587.33, 659.25, 783.99]; // A4 Pentatonic
+                    const melodyFreq = feverNotes[Math.floor(Math.random() * feverNotes.length)];
+                    
+                    const leadOsc = this.ctx.createOscillator();
+                    const leadGain = this.ctx.createGain();
+                    leadOsc.connect(leadGain);
+                    leadGain.connect(this.ctx.destination);
+
+                    leadOsc.type = 'triangle';
+                    leadOsc.frequency.setValueAtTime(melodyFreq, now);
+                    leadGain.gain.setValueAtTime(0.05, now);
+                    leadGain.gain.linearRampToValueAtTime(0, now + 0.3);
+
+                    leadOsc.start(now);
+                    leadOsc.stop(now + 0.3);
+                }
+
+                this.step = (this.step + 1) % 16;
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // --- [게임 물리 및 렌더링 엔진] ---
+        class GameEngine {
+            constructor() {
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                // 가상 고정 해상도 (종횡비 유지용)
+                this.virtualWidth = 800;
+                this.virtualHeight = 400;
+
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.score = 0;
+                this.coinsEarned = 0;
+                this.multiplier = 1.0;
+
+                // 콤보 시스템
+                this.combo = 0;
+                this.comboTimer = 0;
+
+                // 스테이지 시스템 국소 변수
+                this.stage = 1;
+                this.stageProgress = 0; // 현재 스테이지에서의 진행 거리
+                this.isStageClearing = false;
+                this.stageClearTimer = 0;
+
+                // 피버 모드 시스템
+                this.feverMeter = 0;
+                this.isFever = false;
+                this.feverTimer = 0;
+
+                // 중력 반전 시스템 (1: 아래로 추락, -1: 위로 추락)
+                this.gravityDirection = 1;
+
+                // 플레이어 정의
+                this.player = {
+                    x: 120,
+                    y: 0,
+                    width: 40,
+                    height: 40,
+                    vy: 0,
+                    baseGravity: 0.8,
+                    baseJumpForce: -13.5,
+                    isGrounded: false,
+                    jumpCount: 0,
+                    state: 'RUN', // 'RUN', 'JUMP', 'SLIDE'
+                    color: '#00f0ff',
+                    shadowColor: '#0055ff',
+                    // 아이템 상태
+                    shieldActive: false,
+                    magnetTimer: 0,
+                    // 캐릭터 잔상 이펙트용 히스토리
+                    trail: []
+                };
+
+                // 게임 환경 변수
+                this.floorY = 320;
+                this.ceilingY = 80;
+                this.gameSpeed = 7.0;
+                this.distance = 0;
+
+                // 장애물 & 동전 & 파티클 & 플로팅 텍스트 리스트
+                this.obstacles = [];
+                this.coins = [];
+                this.particles = [];
+                this.floatingTexts = [];
+                this.bgStars = [];
+
+                // 스폰 제어 타이머
+                this.obstacleTimer = 0;
+                this.coinTimer = 0;
+
+                // 화면 쉐이크 타이머
+                this.shakeIntensity = 0;
+
+                // 이벤트 바인딩
+                this.initEvents();
+                this.generateStars();
+            }
+
+            resize() {
+                const container = this.canvas.parentElement;
+                const rect = container.getBoundingClientRect();
+                
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                
+                this.scaleX = rect.width / this.virtualWidth;
+                this.scaleY = rect.height / this.virtualHeight;
+            }
+
+            generateStars() {
+                this.bgStars = [];
+                for (let i = 0; i < 50; i++) {
+                    this.bgStars.push({
+                        x: Math.random() * this.virtualWidth,
+                        y: Math.random() * this.virtualHeight,
+                        size: Math.random() * 2 + 1,
+                        speed: Math.random() * 0.4 + 0.1,
+                        color: Math.random() > 0.5 ? '#ffffff' : '#ff007f'
+                    });
+                }
+            }
+
+            start() {
+                this.isPlaying = true;
+                this.isPaused = false;
+                this.score = 0;
+                this.coinsEarned = 0;
+                this.multiplier = 1.0;
+                this.feverMeter = 0;
+                this.isFever = false;
+                this.distance = 0;
+
+                // 콤보 초기화
+                this.combo = 0;
+                this.comboTimer = 0;
+                this.updateComboHUD();
+                
+                // 스테이지 세팅 초기화
+                this.stage = 1;
+                this.stageProgress = 0;
+                this.isStageClearing = false;
+                this.applyStageConfig();
+
+                // 중력 반전 초기화
+                this.gravityDirection = 1;
+                this.hideGravityWarning();
+
+                // 플레이어 아이템 상태 초기화
+                this.player.shieldActive = false;
+                this.player.magnetTimer = 0;
+                this.player.trail = [];
+                this.updateItemIndicators();
+
+                this.obstacles = [];
+                this.coins = [];
+                this.particles = [];
+                this.floatingTexts = [];
+
+                // 플레이어 초기화
+                this.player.y = this.floorY - this.player.height;
+                this.player.vy = 0;
+                this.player.isGrounded = true;
+                this.player.jumpCount = 0;
+                this.player.state = 'RUN';
+
+                // 스킨 로드 적용
+                const activeSkin = SKIN_DATA.find(s => s.id === gameData.equippedSkin) || SKIN_DATA[0];
+                this.player.color = activeSkin.color;
+                this.player.shadowColor = activeSkin.shadowColor;
+
+                // 타이머 리셋
+                this.obstacleTimer = 0;
+                this.coinTimer = 0;
+
+                document.getElementById('start-screen').classList.add('hidden');
+                document.getElementById('gameover-screen').classList.add('hidden');
+                document.getElementById('game-container').classList.remove('hidden');
+
+                this.resize();
+                sound.startBGM();
+                
+                requestAnimationFrame(() => this.loop());
+            }
+
+            applyStageConfig() {
+                const conf = STAGE_CONFIG[this.stage];
+                this.gameSpeed = conf.speed;
+                sound.setBPM(conf.bpm);
+                
+                // BGM 재가동하여 바뀐 템포 적용
+                if (this.isPlaying && !this.isPaused) {
+                    sound.startBGM();
+                }
+
+                // 배경 별 색상 다양화
+                this.bgStars.forEach(star => {
+                    star.color = Math.random() > 0.3 ? '#ffffff' : conf.color;
+                });
+
+                document.getElementById('hud-stage').innerText = this.stage;
+                document.getElementById('hud-stage').style.color = conf.color;
+            }
+
+            stop(crashed = true) {
+                this.isPlaying = false;
+                sound.stopBGM();
+                this.hideGravityWarning();
+                
+                if (crashed) {
+                    sound.playCrash();
+                    this.triggerShake(15);
+                    
+                    gameData.coins += this.coinsEarned;
+                    if (this.score > gameData.highScore) {
+                        gameData.highScore = this.score;
+                    }
+                    saveGameData();
+
+                    document.getElementById('final-score').innerText = Math.floor(this.score).toLocaleString();
+                    document.getElementById('final-coins').innerText = `+${this.coinsEarned}`;
+                    
+                    document.getElementById('game-container').classList.add('hidden');
+                    document.getElementById('gameover-screen').classList.remove('hidden');
+                    
+                    document.getElementById('start-highscore').innerText = gameData.highScore.toLocaleString();
+                    document.getElementById('start-coins').innerText = gameData.coins.toLocaleString();
+                }
+            }
+
+            pause() {
+                if (!this.isPlaying) return;
+                this.isPaused = true;
+                sound.stopBGM();
+                document.getElementById('pause-screen').classList.remove('hidden');
+            }
+
+            resume() {
+                this.isPaused = false;
+                sound.startBGM();
+                document.getElementById('pause-screen').classList.add('hidden');
+                requestAnimationFrame(() => this.loop());
+            }
+
+            // 화면 흔들림 개시
+            triggerShake(power) {
+                this.shakeIntensity = power;
+                document.getElementById('screen-wrapper').classList.add('shake');
+            }
+
+            // 중력 반전 포탈 알림 HUD 제어
+            showGravityWarning() {
+                const el = document.getElementById('gravity-warning');
+                el.style.opacity = '1';
+            }
+
+            hideGravityWarning() {
+                const el = document.getElementById('gravity-warning');
+                el.style.opacity = '0';
+            }
+
+            // 점프 컨트롤 (중력 상태 연계)
+            triggerJump() {
+                if (this.isPaused || !this.isPlaying || this.isStageClearing) return;
+
+                // 슬라이딩 해제 대응
+                if (this.player.state === 'SLIDE') {
+                    this.player.state = 'RUN';
+                    this.player.height = 40;
+                }
+
+                // 점프 방향은 gravityDirection에 역행 (-13.5 * 1 = -13.5 위로 점프 / -13.5 * -1 = 13.5 아래로 점프)
+                const jumpForce = this.player.baseJumpForce * this.gravityDirection;
+
+                if (this.player.isGrounded) {
+                    this.player.vy = jumpForce;
+                    this.player.isGrounded = false;
+                    this.player.jumpCount = 1;
+                    this.player.state = 'JUMP';
+                    sound.playJump();
+                    this.createJumpParticles();
+                } else if (this.player.jumpCount < 2) {
+                    // 2단 점프
+                    this.player.vy = jumpForce * 0.85;
+                    this.player.jumpCount = 2;
+                    sound.playJump();
+                    this.createJumpParticles();
+                }
+            }
+
+            triggerSlideStart() {
+                if (this.isPaused || !this.isPlaying || this.isStageClearing) return;
+                if (this.player.isGrounded && this.player.state !== 'SLIDE') {
+                    this.player.state = 'SLIDE';
+                    this.player.height = 20; // 히트박스 납작하게
+                    
+                    // 정방향이면 바닥 밀착, 역방향이면 천장 밀착
+                    if (this.gravityDirection === 1) {
+                        this.player.y = this.floorY - this.player.height;
+                    } else {
+                        this.player.y = this.ceilingY;
+                    }
+                    sound.playSlide();
+                }
+            }
+
+            triggerSlideEnd() {
+                if (this.player.state === 'SLIDE') {
+                    this.player.state = 'RUN';
+                    this.player.height = 40;
+                    if (this.gravityDirection === 1) {
+                        this.player.y = this.floorY - this.player.height;
+                    } else {
+                        this.player.y = this.ceilingY;
+                    }
+                }
+            }
+
+            initEvents() {
+                // 키보드 제어
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        e.preventDefault();
+                        this.triggerJump();
+                    }
+                    if (e.code === 'ArrowDown' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                        e.preventDefault();
+                        this.triggerSlideStart();
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    if (e.code === 'ArrowDown' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                        this.triggerSlideEnd();
+                    }
+                });
+
+                // 모바일 터치 제어
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const rect = this.canvas.getBoundingClientRect();
+                    const touch = e.touches[0];
+                    const clickX = touch.clientX - rect.left;
+
+                    if (clickX < rect.width / 2) {
+                        this.triggerJump();
+                    } else {
+                        this.triggerSlideStart();
+                    }
+                }, { passive: false });
+
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.triggerSlideEnd();
+                }, { passive: false });
+
+                window.addEventListener('resize', () => {
+                    this.resize();
+                });
+            }
+
+            // 콤보 상승 및 피드백 텍스트 생성
+            addCombo(amount = 1) {
+                this.combo += amount;
+                this.comboTimer = 180; // 3초 유지
+                this.updateComboHUD();
+
+                // 마일스톤별 피드백 생성
+                if (this.combo > 0 && this.combo % 10 === 0) {
+                    let feedback = "COOL!";
+                    let color = "#00f0ff";
+                    if (this.combo >= 40) {
+                        feedback = "UNBELIEVABLE!";
+                        color = "#ffd700";
+                    } else if (this.combo >= 30) {
+                        feedback = "PERFECT!";
+                        color = "#39ff14";
+                    } else if (this.combo >= 20) {
+                        feedback = "GREAT!";
+                        color = "#ff007f";
+                    }
+                    this.spawnFloatingText(this.player.x + 20, this.player.y - 20, feedback, color, 24);
+                }
+            }
+
+            resetCombo() {
+                this.combo = 0;
+                this.comboTimer = 0;
+                this.updateComboHUD();
+            }
+
+            updateComboHUD() {
+                const container = document.getElementById('hud-combo-container');
+                const text = document.getElementById('hud-combo');
+                if (this.combo > 0) {
+                    text.innerText = this.combo;
+                    container.style.opacity = '1';
+                } else {
+                    container.style.opacity = '0';
+                }
+            }
+
+            // 실시간 배율 계산 (콤보 반영)
+            getCombinedMultiplier() {
+                const comboBonus = Math.min(3.0, parseFloat((this.combo * 0.05).toFixed(2)));
+                return this.multiplier + comboBonus;
+            }
+
+            // 아이템 표시기 HUD 상태 업데이트
+            updateItemIndicators() {
+                const shieldIndicator = document.getElementById('hud-shield-indicator');
+                const magnetIndicator = document.getElementById('hud-magnet-indicator');
+
+                if (this.player.shieldActive) {
+                    shieldIndicator.classList.remove('hidden');
+                } else {
+                    shieldIndicator.classList.add('hidden');
+                }
+
+                if (this.player.magnetTimer > 0) {
+                    magnetIndicator.classList.remove('hidden');
+                } else {
+                    magnetIndicator.classList.add('hidden');
+                }
+            }
+
+            // 파티클 생성
+            createJumpParticles() {
+                const particleVy = this.gravityDirection === 1 ? -Math.random() * 3 : Math.random() * 3;
+                const particleY = this.gravityDirection === 1 ? this.player.y + this.player.height : this.player.y;
+
+                for (let i = 0; i < 10; i++) {
+                    this.particles.push({
+                        x: this.player.x + this.player.width / 2,
+                        y: particleY,
+                        vx: (Math.random() - 0.5) * 5,
+                        vy: particleVy,
+                        size: Math.random() * 4 + 2,
+                        alpha: 1,
+                        color: this.player.color === 'rainbow' ? '#ff007f' : this.player.color
+                    });
+                }
+            }
+
+            createCollectParticles(x, y, color) {
+                for (let i = 0; i < 12; i++) {
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 7,
+                        vy: (Math.random() - 0.5) * 7,
+                        size: Math.random() * 5 + 3,
+                        alpha: 1,
+                        color: color
+                    });
+                }
+            }
+
+            // 쉴드 파괴 파편 연출
+            createShieldBreakParticles(x, y) {
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        size: Math.random() * 6 + 3,
+                        alpha: 1.2,
+                        color: '#00f0ff'
+                    });
+                }
+            }
+
+            // 거대한 스테이지 축하 파티클 폭죽 연출
+            createStageFireworks() {
+                const colors = ['#00f0ff', '#ff007f', '#39ff14', '#ffd700', '#b026ff'];
+                for (let j = 0; j < 5; j++) {
+                    const fx = Math.random() * (this.virtualWidth - 200) + 100;
+                    const fy = Math.random() * (this.virtualHeight - 200) + 100;
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    for (let i = 0; i < 20; i++) {
+                        this.particles.push({
+                            x: fx,
+                            y: fy,
+                            vx: Math.cos(i) * (Math.random() * 6 + 2),
+                            vy: Math.sin(i) * (Math.random() * 6 + 2),
+                            size: Math.random() * 6 + 4,
+                            alpha: 1.5,
+                            color: randomColor
+                        });
+                    }
+                }
+            }
+
+            // 화면 플로팅 텍스트 스폰
+            spawnFloatingText(x, y, text, color, fontSize = 20) {
+                this.floatingTexts.push({
+                    x: x,
+                    y: y,
+                    text: text,
+                    color: color,
+                    fontSize: fontSize,
+                    alpha: 1.0,
+                    vy: -1.5
+                });
+            }
+
+            // 물리 업데이트 로프
+            update() {
+                // 화면 쉐이크 감쇠 처리
+                if (this.shakeIntensity > 0) {
+                    this.shakeIntensity -= 0.5;
+                    if (this.shakeIntensity <= 0) {
+                        document.getElementById('screen-wrapper').classList.remove('shake');
+                    }
+                }
+
+                // 스테이지 클리어 축하 연출 대기 상태 처리
+                if (this.isStageClearing) {
+                    this.stageClearTimer--;
+                    
+                    // 서서히 감속되다가 다음 스테이지로 탄력 기동
+                    this.gameSpeed *= 0.95;
+                    this.player.vy *= 0.8;
+                    
+                    // 파티클 업데이트만 진행
+                    this.particles.forEach(p => {
+                        p.x += p.vx; p.y += p.vy; p.alpha -= 0.02;
+                    });
+                    this.particles = this.particles.filter(p => p.alpha > 0);
+
+                    // 텍스트 애니메이션 진행
+                    this.floatingTexts.forEach(t => {
+                        t.y += t.vy; t.alpha -= 0.02;
+                    });
+                    this.floatingTexts = this.floatingTexts.filter(t => t.alpha > 0);
+
+                    if (this.stageClearTimer <= 0) {
+                        this.isStageClearing = false;
+                        this.stage += 1;
+                        this.stageProgress = 0;
+                        this.applyStageConfig();
+                        // 중력 정상화 리셋
+                        this.gravityDirection = 1;
+                        this.hideGravityWarning();
+                    }
+                    return; // 인게임 장애물 이동 및 처리 완전 차단
+                }
+
+                // 콤보 타이머 감쇄
+                if (this.combo > 0) {
+                    this.comboTimer--;
+                    if (this.comboTimer <= 0) {
+                        this.resetCombo();
+                    }
+                }
+
+                // 아이템 지속시간 제어
+                if (this.player.magnetTimer > 0) {
+                    this.player.magnetTimer--;
+                    if (this.player.magnetTimer <= 0) {
+                        this.updateItemIndicators();
+                    }
+                }
+
+                // 거리 증가 및 속도 물리 반영
+                const speedTick = this.gameSpeed * 0.05;
+                this.distance += speedTick;
+                this.stageProgress += speedTick;
+                
+                // 총 배율 계산 적용
+                const currentMultiplier = this.getCombinedMultiplier();
+                this.score += (this.gameSpeed * 0.1) * currentMultiplier;
+
+                // 스테이지 진행률 계산
+                const stageGoal = STAGE_CONFIG[this.stage].distance;
+                const progressPct = Math.min(100, (this.stageProgress / stageGoal) * 100);
+                document.getElementById('hud-progress-bar').style.width = `${progressPct}%`;
+
+                // 스테이지 클리어 조건 판단 (Stage 5는 최고 한계 없는 무한 질주)
+                if (this.stageProgress >= stageGoal && this.stage < 5) {
+                    this.isStageClearing = true;
+                    this.stageClearTimer = 100; // 약 1.8초 동안 슬로우모션 스테이지업 연출
+                    this.obstacles = [];
+                    this.coins = [];
+                    this.createStageFireworks();
+                    sound.playStageClear();
+                    this.triggerShake(12);
+                    return;
+                }
+
+                // 피버 게이지 관리
+                if (this.isFever) {
+                    this.feverTimer--;
+                    this.feverMeter = (this.feverTimer / 360) * 100;
+                    if (this.feverTimer <= 0) {
+                        this.isFever = false;
+                        this.multiplier = 1.0;
+                        this.gameSpeed = STAGE_CONFIG[this.stage].speed;
+                    }
+                }
+
+                // 플레이어 중력 및 낙하/상승 물리 연산 (중력 반전 물리)
+                const gravityVal = this.player.baseGravity * this.gravityDirection;
+                this.player.vy += gravityVal;
+                this.player.y += this.player.vy;
+
+                // 충돌 바운더리 체크 (중력 방향에 맞춰 천장과 바닥 고정 처리)
+                if (this.gravityDirection === 1) { // 정상 중력 (아래쪽 바닥)
+                    if (this.player.y >= this.floorY - this.player.height) {
+                        this.player.y = this.floorY - this.player.height;
+                        this.player.vy = 0;
+                        this.player.isGrounded = true;
+                        this.player.jumpCount = 0;
+                        if (this.player.state !== 'SLIDE') this.player.state = 'RUN';
+                    }
+                } else { // 반전 중력 (위쪽 천장 바닥)
+                    if (this.player.y <= this.ceilingY) {
+                        this.player.y = this.ceilingY;
+                        this.player.vy = 0;
+                        this.player.isGrounded = true;
+                        this.player.jumpCount = 0;
+                        if (this.player.state !== 'SLIDE') this.player.state = 'RUN';
+                    }
+                }
+
+                // 플레이어 잔상 역사기록 저장 (Trail)
+                this.player.trail.push({
+                    x: this.player.x,
+                    y: this.player.y,
+                    width: this.player.state === 'SLIDE' ? this.player.width + 12 : this.player.width,
+                    height: this.player.height,
+                    state: this.player.state
+                });
+                if (this.player.trail.length > 7) {
+                    this.player.trail.shift();
+                }
+
+                // 배경 별 무브먼트
+                this.bgStars.forEach(star => {
+                    star.x -= star.speed * (this.gameSpeed * 0.4);
+                    if (star.x < 0) star.x = this.virtualWidth;
+                });
+
+                // 장애물 / 발판 스폰 스케줄링 (난이도 맞춤 패턴 생성기)
+                this.obstacleTimer += this.gameSpeed;
+                if (this.obstacleTimer > 750) { 
+                    this.obstacleTimer = 0;
+                    this.spawnDynamicObstacle();
+                }
+
+                // 동전 스폰 스케줄링
+                this.coinTimer += this.gameSpeed;
+                if (this.coinTimer > 200) {
+                    this.coinTimer = 0;
+                    this.spawnCoinPattern();
+                }
+
+                // 장애물 처리 및 충돌 검사
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const obs = this.obstacles[i];
+                    obs.x -= this.gameSpeed;
+
+                    // --- [아슬아슬 회피(Near Miss) 판정 로직] ---
+                    // 장애물과 플레이어의 가로축이 일치하는 짧은 순간에, 아슬아슬하게 부딪치지 않은 경우 판정
+                    if (!obs.nearMissChecked && obs.x < this.player.x + this.player.width && obs.x + obs.width > this.player.x) {
+                        // 세로축 차이 검사
+                        const distY = Math.abs(this.player.y + this.player.height/2 - (obs.y + obs.height/2));
+                        const combinedHalfHeight = (this.player.height + obs.height) / 2;
+                        
+                        // 충돌은 아니지만 (distY >= combinedHalfHeight) 매우 근소한 차이 (25px 이내)일 때
+                        if (distY >= combinedHalfHeight && distY < combinedHalfHeight + 35) {
+                            obs.nearMissChecked = true;
+                            sound.playNearMiss();
+                            this.triggerShake(5);
+                            this.spawnFloatingText(this.player.x, this.player.y - 30, "NEAR MISS!!", "#ff0055", 22);
+                            this.score += 1000 * currentMultiplier;
+                            this.addCombo(2); // 회피는 콤보 2 상승!
+                            
+                            if (!this.isFever) {
+                                this.feverMeter = Math.min(100, this.feverMeter + 10); // 회피 시 피버 대폭 충전
+                                if (this.feverMeter >= 100) this.triggerFever();
+                            }
+                        }
+                    }
+
+                    // 일반 기믹 및 장애물 충돌 처리 
+                    if (this.checkCollision(this.player, obs)) {
+                        
+                        // 1. [점프 패드] 밟음
+                        if (obs.type === 'JUMP_PAD') {
+                            const launchPower = -21 * this.gravityDirection;
+                            this.player.vy = launchPower;
+                            this.player.isGrounded = false;
+                            this.player.state = 'JUMP';
+                            
+                            this.triggerShake(8);
+                            sound.playSuperJump();
+                            this.createCollectParticles(obs.x + obs.width/2, obs.y, '#39ff14');
+                            this.spawnFloatingText(obs.x, obs.y - 15, "HYPER LAUNCH!", "#39ff14", 16);
+                            this.obstacles.splice(i, 1);
+                            continue;
+                        }
+
+                        // 2. [중력 반전 포탈] 통과
+                        if (obs.type === 'PORTAL') {
+                            this.gravityDirection *= -1; 
+                            this.player.isGrounded = false;
+                            this.player.state = 'JUMP';
+                            this.player.vy = 2 * this.gravityDirection; 
+                            
+                            this.triggerShake(10);
+                            sound.playPortal();
+                            this.createCollectParticles(obs.x + obs.width/2, obs.y + obs.height/2, '#b026ff');
+                            this.spawnFloatingText(obs.x, obs.y - 15, "GRAVITY SHIFT!", "#b026ff", 16);
+                            
+                            if (this.gravityDirection === -1) {
+                                this.showGravityWarning();
+                            } else {
+                                this.hideGravityWarning();
+                            }
+
+                            this.obstacles.splice(i, 1);
+                            continue;
+                        }
+
+                        // 3. [일반 함정 장애물]
+                        if (!this.isFever) {
+                            // 🛡️ 실드 아이템 활성화 상태인 경우 파괴 방어!
+                            if (this.player.shieldActive) {
+                                this.player.shieldActive = false;
+                                this.updateItemIndicators();
+                                sound.playShieldBreak();
+                                this.triggerShake(12);
+                                this.createShieldBreakParticles(obs.x + obs.width/2, obs.y + obs.height/2);
+                                this.spawnFloatingText(this.player.x, this.player.y - 30, "SHIELD BROKEN!", "#00f0ff", 20);
+                                this.obstacles.splice(i, 1);
+                                continue;
+                            }
+
+                            this.stop(true);
+                            return;
+                        } else {
+                            // 피버 상태면 가차없이 격파!
+                            this.createCollectParticles(obs.x + obs.width/2, obs.y + obs.height/2, '#ff0055');
+                            this.score += 600;
+                            this.obstacles.splice(i, 1);
+                            sound.playJump();
+                            continue;
+                        }
+                    }
+
+                    // 이탈 장애물 정리
+                    if (obs.x + obs.width < 0) {
+                        this.obstacles.splice(i, 1);
+                        // 완벽 충돌 회피시 피버 게이지 충전
+                        if (!this.isFever) {
+                            this.feverMeter = Math.min(100, this.feverMeter + 5.5);
+                            if (this.feverMeter >= 100) this.triggerFever();
+                        }
+                    }
+                }
+
+                // 코인 획득 및 무브먼트 연산
+                for (let i = this.coins.length - 1; i >= 0; i--) {
+                    const coin = this.coins[i];
+                    coin.x -= this.gameSpeed;
+
+                    // 🧲 자석 아이템 활성화 상태 또는 피버 상태일 때 코인을 아주 강력하게 흡수
+                    if (this.player.magnetTimer > 0 || this.isFever) {
+                        const dx = this.player.x - coin.x;
+                        const dy = (this.player.y + this.player.height/2) - coin.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        // 자석 적용 유효반경
+                        const pullRadius = this.player.magnetTimer > 0 ? 250 : 200;
+                        if (dist < pullRadius) {
+                            coin.x += (dx / dist) * 16;
+                            coin.y += (dy / dist) * 16;
+                        }
+                    }
+
+                    // 특수 기능성 아이템 획득 체크
+                    if (this.checkCollision(this.player, coin)) {
+                        if (coin.isItem) {
+                            sound.playItemGet();
+                            this.createCollectParticles(coin.x, coin.y, coin.itemColor);
+                            
+                            if (coin.itemType === 'SHIELD') {
+                                this.player.shieldActive = true;
+                                this.spawnFloatingText(coin.x, coin.y - 20, "SHIELD ON!", "#00f0ff", 22);
+                            } else if (coin.itemType === 'MAGNET') {
+                                this.player.magnetTimer = 300; // 약 5초 유지
+                                this.spawnFloatingText(coin.x, coin.y - 20, "MAGNET ACTIVE!", "#22f0ff", 22);
+                            }
+                            this.updateItemIndicators();
+                            this.coins.splice(i, 1);
+                            continue;
+                        }
+
+                        // 일반 코인 수집
+                        this.coinsEarned += 1;
+                        this.score += 180 * currentMultiplier;
+                        this.addCombo(1); // 콤보 증가!
+                        sound.playCoin();
+                        this.createCollectParticles(coin.x, coin.y, '#ffd700');
+                        
+                        if (!this.isFever) {
+                            this.feverMeter = Math.min(100, this.feverMeter + 4.5);
+                            if (this.feverMeter >= 100) this.triggerFever();
+                        }
+                        this.coins.splice(i, 1);
+                        continue;
+                    }
+
+                    if (coin.x + 15 < 0) this.coins.splice(i, 1);
+                }
+
+                // 파티클 페이드아웃
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx; p.y += p.vy; p.alpha -= 0.035;
+                    if (p.alpha <= 0) this.particles.splice(i, 1);
+                }
+
+                // 플로팅 텍스트 연산
+                for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+                    const t = this.floatingTexts[i];
+                    t.y += t.vy;
+                    t.alpha -= 0.025;
+                    if (t.alpha <= 0) {
+                        this.floatingTexts.splice(i, 1);
+                    }
+                }
+
+                // HUD 텍스트 매칭
+                document.getElementById('hud-score').innerText = String(Math.floor(this.score)).padStart(5, '0');
+                document.getElementById('hud-coins').innerText = this.coinsEarned;
+                document.getElementById('hud-multiplier').innerText = `x${currentMultiplier.toFixed(1)}`;
+                document.getElementById('hud-fever-bar').style.width = `${this.feverMeter}%`;
+            }
+
+            // 피버 모드 점화
+            triggerFever() {
+                this.isFever = true;
+                this.feverTimer = 360; // 6초
+                this.multiplier = 3.5; // 피버 점수 보정 대폭 강화
+                this.gameSpeed = STAGE_CONFIG[this.stage].speed + 3.5;
+                this.triggerShake(12);
+                this.createCollectParticles(this.player.x, this.player.y, '#ffd700');
+                this.spawnFloatingText(this.player.x, this.player.y - 40, "FEVER PULSE RUSH!!!", "#ff007f", 26);
+            }
+
+            // 화려하고 다채로운 복합 장애물 스폰 로직
+            spawnDynamicObstacle() {
+                const rand = Math.random();
+                const stageNum = this.stage;
+
+                // 저레벨 스테이지에서는 단순 장애물 출현 비중을 높이고 고레벨 기믹 차단
+                if (stageNum === 1) {
+                    if (rand < 0.4) {
+                        this.obstacles.push({ x: this.virtualWidth + 50, y: this.floorY - 40, width: 30, height: 40, type: 'LOW', nearMissChecked: false });
+                    } else if (rand < 0.7) {
+                        this.obstacles.push({ x: this.virtualWidth + 50, y: this.floorY - 65, width: 30, height: 65, type: 'DOUBLE', nearMissChecked: false });
+                    } else {
+                        this.obstacles.push({ x: this.virtualWidth + 50, y: this.floorY - 12, width: 40, height: 12, type: 'JUMP_PAD' });
+                    }
+                    return;
+                }
+
+                // 스테이지 2 이상부터 중력반전 포탈 및 심화 장애물 출현!
+                if (rand < 0.3) {
+                    const obsY = this.gravityDirection === 1 ? this.floorY - 65 : this.ceilingY + 40;
+                    this.obstacles.push({
+                        x: this.virtualWidth + 50,
+                        y: obsY,
+                        width: 35,
+                        height: 25,
+                        type: 'HIGH',
+                        nearMissChecked: false
+                    });
+                } else if (rand < 0.5) {
+                    const obsY = this.gravityDirection === 1 ? this.floorY - 60 : this.ceilingY;
+                    this.obstacles.push({
+                        x: this.virtualWidth + 50,
+                        y: obsY,
+                        width: 30,
+                        height: 60,
+                        type: 'DOUBLE',
+                        nearMissChecked: false
+                    });
+                } else if (rand < 0.65) {
+                    const obsY = this.gravityDirection === 1 ? this.floorY - 12 : this.ceilingY;
+                    this.obstacles.push({
+                        x: this.virtualWidth + 50,
+                        y: obsY,
+                        width: 40,
+                        height: 12,
+                        type: 'JUMP_PAD'
+                    });
+                } else if (rand < 0.8) {
+                    this.obstacles.push({
+                        x: this.virtualWidth + 50,
+                        y: 140,
+                        width: 25,
+                        height: 80,
+                        type: 'PORTAL'
+                    });
+                } else {
+                    const obsY = this.gravityDirection === 1 ? this.floorY - 40 : this.ceilingY;
+                    this.obstacles.push({ x: this.virtualWidth + 50, y: obsY, width: 25, height: 40, type: 'LOW', nearMissChecked: false });
+                    this.obstacles.push({ x: this.virtualWidth + 140, y: obsY, width: 25, height: 40, type: 'LOW', nearMissChecked: false });
+                }
+            }
+
+            spawnCoinPattern() {
+                const rand = Math.random();
+                // 가끔 쉴드나 자석 아이템을 스폰 (피버 상태가 아닐 때 더욱 귀하게 배치)
+                if (rand < 0.05 && !this.isFever) {
+                    const isShield = Math.random() > 0.5;
+                    this.coins.push({
+                        x: this.virtualWidth + 50,
+                        y: 120 + Math.random() * 120,
+                        width: 20,
+                        height: 20,
+                        isItem: true,
+                        itemType: isShield ? 'SHIELD' : 'MAGNET',
+                        itemColor: isShield ? '#00f0ff' : '#22f0ff'
+                    });
+                } else if (rand > 0.35) {
+                    // 파형 형태 코인 라인
+                    const patternY = 200 + (Math.sin(this.distance / 8) * 85);
+                    this.coins.push({
+                        x: this.virtualWidth + 50,
+                        y: patternY,
+                        width: 15,
+                        height: 15,
+                        isItem: false
+                    });
+                }
+            }
+
+            // 충돌 체크 AABB 알고리즘
+            checkCollision(rect1, rect2) {
+                return (
+                    rect1.x < rect2.x + rect2.width &&
+                    rect1.x + rect1.width > rect2.x &&
+                    rect1.y < rect2.y + rect2.height &&
+                    rect1.y + rect1.height > rect2.y
+                );
+            }
+
+            // 드로잉 비주얼 렌더링
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.save();
+                this.ctx.scale(this.scaleX, this.scaleY);
+
+                // 현재 스테이지 테마 설정값 추출
+                const stageColor = STAGE_CONFIG[this.stage].color;
+                const secondaryColor = STAGE_CONFIG[this.stage].secondary;
+
+                // 1. 우주 성운 배경 드로잉
+                this.bgStars.forEach(star => {
+                    this.ctx.globalAlpha = star.speed * 1.5;
+                    this.ctx.fillStyle = star.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                this.ctx.globalAlpha = 1.0;
+
+                // 2. 더블 네온 그리드 라인 (바닥 & 천장)
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = this.isFever ? '#ff007f' : stageColor;
+                this.ctx.strokeStyle = this.isFever ? '#ff007f' : stageColor;
+                this.ctx.lineWidth = 4;
+
+                // 바닥선
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, this.floorY);
+                this.ctx.lineTo(this.virtualWidth, this.floorY);
+                this.ctx.stroke();
+
+                // 천장선
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, this.ceilingY);
+                this.ctx.lineTo(this.virtualWidth, this.ceilingY);
+                this.ctx.stroke();
+
+                // 3차원 그리드 라인 착시 장식 (원근 입체감 증폭)
+                this.ctx.lineWidth = 1.5;
+                this.ctx.shadowBlur = 0;
+                this.ctx.strokeStyle = this.isFever ? 'rgba(255, 0, 127, 0.2)' : `${stageColor}25`;
+                const gridOffset = (this.distance * 10) % 50;
+
+                for (let x = -gridOffset; x < this.virtualWidth; x += 50) {
+                    // 아래 바닥 원근선
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, this.floorY);
+                    this.ctx.lineTo(x - 50, this.virtualHeight);
+                    this.ctx.stroke();
+
+                    // 위 천장 원근선
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, this.ceilingY);
+                    this.ctx.lineTo(x - 50, 0);
+                    this.ctx.stroke();
+                }
+
+                // 3. 파티클
+                this.particles.forEach(p => {
+                    this.ctx.save();
+                    this.ctx.shadowBlur = 12;
+                    this.ctx.shadowColor = p.color;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = Math.max(0, p.alpha);
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+
+                // 4. 동전 & 아이템 그리기
+                this.coins.forEach(coin => {
+                    this.ctx.save();
+                    
+                    if (coin.isItem) {
+                        this.ctx.shadowBlur = 18;
+                        this.ctx.shadowColor = coin.itemColor;
+                        this.ctx.fillStyle = coin.itemColor;
+                        
+                        if (coin.itemType === 'SHIELD') {
+                            // 쉴드 아이템 디자인: 파란색 방패 6각형
+                            this.ctx.beginPath();
+                            const cx = coin.x + 10;
+                            const cy = coin.y + 10;
+                            const size = 12;
+                            for (let j = 0; j < 6; j++) {
+                                const angle = (j * Math.PI) / 3;
+                                const x = cx + size * Math.cos(angle);
+                                const y = cy + size * Math.sin(angle);
+                                if (j === 0) this.ctx.moveTo(x, y);
+                                else this.ctx.lineTo(x, y);
+                            }
+                            this.ctx.closePath();
+                            this.ctx.fill();
+                            // 안쪽 쉴드 심볼 십자가
+                            this.ctx.fillStyle = '#111';
+                            this.ctx.fillRect(cx - 2, cy - 6, 4, 12);
+                            this.ctx.fillRect(cx - 6, cy - 2, 12, 4);
+                        } else if (coin.itemType === 'MAGNET') {
+                            // 자석 아이템 디자인: 하늘색 말굽 U자형 자석
+                            const cx = coin.x + 10;
+                            const cy = coin.y + 10;
+                            this.ctx.lineWidth = 4;
+                            this.ctx.strokeStyle = '#00f0ff';
+                            this.ctx.beginPath();
+                            this.ctx.arc(cx, cy, 8, Math.PI, 0, true);
+                            this.ctx.stroke();
+                            // 자석 극 부분 색칠빨강
+                            this.ctx.fillStyle = '#ff0033';
+                            this.ctx.fillRect(cx - 10, cy, 4, 4);
+                            this.ctx.fillRect(cx + 6, cy, 4, 4);
+                        }
+                    } else {
+                        // 일반 동전
+                        this.ctx.shadowBlur = 12;
+                        this.ctx.shadowColor = '#ffd700';
+                        this.ctx.fillStyle = '#ffd700';
+                        this.ctx.beginPath();
+                        this.ctx.arc(coin.x + 7.5, coin.y + 7.5, 8, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.fillStyle = '#110c00';
+                        this.ctx.beginPath();
+                        this.ctx.arc(coin.x + 7.5, coin.y + 7.5, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                    this.ctx.restore();
+                });
+
+                // 5. 장애물 & 복합 기믹 그리기
+                this.obstacles.forEach(obs => {
+                    this.ctx.save();
+
+                    if (obs.type === 'JUMP_PAD') {
+                        // [점프패드 디자인]
+                        this.ctx.shadowBlur = 18;
+                        this.ctx.shadowColor = '#39ff14';
+                        this.ctx.fillStyle = '#222';
+                        this.ctx.strokeStyle = '#39ff14';
+                        this.ctx.lineWidth = 2.5;
+                        this.drawRoundedRect(obs.x, obs.y, obs.width, obs.height, 4);
+                        this.ctx.fill();
+                        this.ctx.stroke();
+
+                        // 솟구치는 화살표 무늬
+                        this.ctx.fillStyle = '#39ff14';
+                        this.ctx.beginPath();
+                        const padCenter = obs.x + obs.width / 2;
+                        if (this.gravityDirection === 1) {
+                            this.ctx.moveTo(padCenter, obs.y + 2);
+                            this.ctx.lineTo(padCenter - 10, obs.y + 10);
+                            this.ctx.lineTo(padCenter + 10, obs.y + 10);
+                        } else {
+                            this.ctx.moveTo(padCenter, obs.y + obs.height - 2);
+                            this.ctx.lineTo(padCenter - 10, obs.y + obs.height - 10);
+                            this.ctx.lineTo(padCenter + 10, obs.y + obs.height - 10);
+                        }
+                        this.ctx.closePath();
+                        this.ctx.fill();
+
+                    } else if (obs.type === 'PORTAL') {
+                        // [중력반전 포탈 디자인]
+                        this.ctx.shadowBlur = 22;
+                        this.ctx.shadowColor = '#b026ff';
+                        this.ctx.fillStyle = 'rgba(20, 0, 40, 0.8)';
+                        this.ctx.strokeStyle = '#b026ff';
+                        this.ctx.lineWidth = 3;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(obs.x + obs.width / 2, obs.y + obs.height / 2, obs.width / 2, obs.height / 2, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        this.ctx.stroke();
+
+                        const portalPulse = (Date.now() / 80) % 15;
+                        this.ctx.strokeStyle = '#ff00d4';
+                        this.ctx.lineWidth = 1.5;
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(obs.x + obs.width / 2, obs.y + obs.height / 2, Math.max(2, obs.width / 2 - portalPulse), Math.max(5, obs.height / 2 - portalPulse * 2.5), 0, 0, Math.PI * 2);
+                        this.ctx.stroke();
+
+                    } else {
+                        // [일반 함정 장애물]
+                        this.ctx.shadowBlur = 15;
+                        this.ctx.shadowColor = '#ff0033';
+                        this.ctx.fillStyle = '#ff0055';
+                        this.ctx.strokeStyle = '#ffffff';
+                        this.ctx.lineWidth = 2;
+
+                        this.drawRoundedRect(obs.x, obs.y, obs.width, obs.height, 6);
+                        this.ctx.fill();
+                        this.ctx.stroke();
+
+                        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(obs.x + 5, obs.y + 5);
+                        this.ctx.lineTo(obs.x + obs.width - 5, obs.y + obs.height - 5);
+                        this.ctx.stroke();
+                    }
+
+                    this.ctx.restore();
+                });
+
+                // 6. 플레이어 캐릭터 잔상(Trail) 렌더링
+                this.player.trail.forEach((t, index) => {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = (index + 1) * 0.12; // 점진적 알파
+                    this.ctx.shadowBlur = 10;
+                    
+                    let trailColor = this.player.color;
+                    if (trailColor === 'rainbow' || this.isFever) {
+                        const hue = (Date.now() / 8 + index * 10) % 360;
+                        trailColor = `hsl(${hue}, 100%, 65%)`;
+                    }
+                    this.ctx.shadowColor = trailColor;
+                    this.ctx.fillStyle = trailColor;
+
+                    if (this.gravityDirection === -1) {
+                        this.ctx.translate(t.x + t.width / 2, t.y + t.height / 2);
+                        this.ctx.scale(1, -1);
+                        this.ctx.translate(-(t.x + t.width / 2), -(t.y + t.height / 2));
+                    }
+
+                    this.drawRoundedRect(t.x, t.y, t.width, t.height, 8);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                });
+
+                // 7. 플레이어 본체 그리기
+                this.ctx.save();
+                this.ctx.shadowBlur = 22;
+
+                let resolvedColor = this.player.color;
+                if (resolvedColor === 'rainbow' || this.isFever) {
+                    const hue = (Date.now() / 8) % 360;
+                    resolvedColor = `hsl(${hue}, 100%, 60%)`;
+                }
+                this.ctx.shadowColor = resolvedColor;
+                this.ctx.fillStyle = resolvedColor;
+
+                const isSliding = this.player.state === 'SLIDE';
+                const pWidth = isSliding ? this.player.width + 12 : this.player.width;
+                const pHeight = this.player.height;
+
+                // 중력 뒤집기 보정
+                if (this.gravityDirection === -1) {
+                    this.ctx.translate(this.player.x + pWidth / 2, this.player.y + pHeight / 2);
+                    this.ctx.scale(1, -1);
+                    this.ctx.translate(-(this.player.x + pWidth / 2), -(this.player.y + pHeight / 2));
+                }
+
+                // 모서리 둥근 마름모형 큐브 본체
+                this.drawRoundedRect(this.player.x, this.player.y, pWidth, pHeight, 10);
+                this.ctx.fill();
+
+                // 가상의 코어 아이 센서
+                this.ctx.shadowBlur = 6;
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.beginPath();
+                if (isSliding) {
+                    this.ctx.arc(this.player.x + 38, this.player.y + 10, 4, 0, Math.PI * 2);
+                } else {
+                    this.ctx.arc(this.player.x + 28, this.player.y + 14, 5, 0, Math.PI * 2);
+                }
+                this.ctx.fill();
+
+                // 쉴드 작동 시 플레이어 주위 방어막 돔 렌더링
+                if (this.player.shieldActive) {
+                    this.ctx.strokeStyle = '#00f0ff';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.shadowColor = '#00f0ff';
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.player.x + pWidth / 2, this.player.y + pHeight / 2, 35, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+
+                this.ctx.restore();
+
+                // 8. 플로팅 텍스트 렌더링
+                this.floatingTexts.forEach(t => {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = t.alpha;
+                    this.ctx.font = `900 ${t.fontSize}px Orbitron`;
+                    this.ctx.fillStyle = t.color;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.shadowColor = t.color;
+                    this.ctx.fillText(t.text, t.x, t.y);
+                    this.ctx.restore();
+                });
+
+                // 9. [스테이지 업그레이드 중간 보너스 연출]
+                if (this.isStageClearing) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                    this.ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
+
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = stageColor;
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.font = '900 36px Orbitron';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(`STAGE ${this.stage} CLEAR!`, this.virtualWidth / 2, this.virtualHeight / 2 - 10);
+                    
+                    this.ctx.font = '700 16px Orbitron';
+                    this.ctx.fillStyle = stageColor;
+                    this.ctx.fillText(`HYPERDRIVE TO STAGE ${this.stage + 1}...`, this.virtualWidth / 2, this.virtualHeight / 2 + 25);
+                }
+
+                // 10. 피버 스크린 오라
+                if (this.isFever) {
+                    this.ctx.strokeStyle = resolvedColor;
+                    this.ctx.lineWidth = 4;
+                    this.ctx.strokeRect(0, 0, this.virtualWidth, this.virtualHeight);
+                }
+
+                this.ctx.restore();
+            }
+
+            // 그리기 도우미
+            drawRoundedRect(x, y, width, height, radius) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + radius, y);
+                this.ctx.lineTo(x + width - radius, y);
+                this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.ctx.lineTo(x + width, y + height - radius);
+                this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.ctx.lineTo(x + radius, y + height);
+                this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.ctx.lineTo(x, y + radius);
+                this.ctx.quadraticCurveTo(x, y, x + radius, y);
+                this.ctx.closePath();
+            }
+
+            // 게임 메인 가동 사이클
+            loop() {
+                if (!this.isPlaying) return;
+                if (this.isPaused) return;
+
+                this.update();
+                this.draw();
+
+                requestAnimationFrame(() => this.loop());
+            }
+        }
+
+        // --- [상점 및 로직 UI 바인딩] ---
+        const gameEngine = new GameEngine();
+
+        // 상점 리스트 생성
+        function renderShop() {
+            const container = document.getElementById('skin-list');
+            container.innerHTML = '';
+
+            SKIN_DATA.forEach(skin => {
+                const isEquipped = gameData.equippedSkin === skin.id;
+                let skinShowColor = skin.color;
+                if (skin.color === 'rainbow') {
+                    skinShowColor = 'linear-gradient(45deg, #ff007f, #00f0ff, #39ff14)';
+                }
+
+                const card = document.createElement('div');
+                card.className = `bg-gray-900 border-2 rounded-2xl p-4 flex flex-col items-center justify-between text-center transition-all ${
+                    isEquipped ? 'border-purple-500 bg-purple-950/20' : 'border-gray-800'
+                }`;
+
+                const previewBall = document.createElement('div');
+                previewBall.className = "w-16 h-16 rounded-2xl mb-4 shadow-lg";
+                if (skin.color === 'rainbow') {
+                    previewBall.style.background = skinShowColor;
+                } else {
+                    previewBall.style.backgroundColor = skin.color;
+                    previewBall.style.boxShadow = `0 0 15px ${skin.shadowColor}`;
+                }
+
+                const title = document.createElement('div');
+                title.className = "font-bold text-sm text-gray-200 mb-1";
+                title.innerText = skin.name;
+
+                const status = document.createElement('div');
+                status.className = "text-xs mb-3";
+                if (!skin.unlocked) {
+                    status.className += " text-yellow-400 font-orbitron";
+                    status.innerText = `🪙 ${skin.price}`;
+                } else if (isEquipped) {
+                    status.className += " text-purple-400 font-bold";
+                    status.innerText = "착용 중";
+                } else {
+                    status.className += " text-green-400";
+                    status.innerText = "보유함";
+                }
+
+                const btn = document.createElement('button');
+                btn.className = `w-full py-2 rounded-xl text-xs font-bold transition-transform active:scale-95 ${
+                    isEquipped 
+                        ? 'bg-purple-800 text-purple-200 cursor-not-allowed' 
+                        : skin.unlocked 
+                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                            : 'bg-yellow-600 hover:bg-yellow-500 text-white'
+                }`;
+                btn.innerText = isEquipped ? 'EQUIPPED' : skin.unlocked ? '장착하기' : '구매하기';
+
+                btn.addEventListener('click', () => {
+                    if (isEquipped) return;
+
+                    if (skin.unlocked) {
+                        gameData.equippedSkin = skin.id;
+                        saveGameData();
+                        renderShop();
+                    } else {
+                        if (gameData.coins >= skin.price) {
+                            gameData.coins -= skin.price;
+                            gameData.unlockedSkins.push(skin.id);
+                            skin.unlocked = true;
+                            gameData.equippedSkin = skin.id;
+                            
+                            saveGameData();
+                            renderShop();
+                            document.getElementById('shop-coin-count').innerText = gameData.coins.toLocaleString();
+                            sound.playCoin();
+                        } else {
+                            btn.innerText = "코인 부족!";
+                            btn.classList.add('bg-red-600');
+                            setTimeout(() => {
+                                btn.innerText = '구매하기';
+                                btn.classList.remove('bg-red-600');
+                            }, 1000);
+                        }
+                    }
+                });
+
+                card.appendChild(previewBall);
+                card.appendChild(title);
+                card.appendChild(status);
+                card.appendChild(btn);
+
+                container.appendChild(card);
+            });
+        }
+
+        // --- [이벤트 바인딩 모음] ---
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            sound.init();
+            gameEngine.start();
+        });
+
+        document.getElementById('btn-shop').addEventListener('click', () => {
+            document.getElementById('shop-coin-count').innerText = gameData.coins.toLocaleString();
+            renderShop();
+            document.getElementById('shop-screen').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-shop-close').addEventListener('click', () => {
+            document.getElementById('shop-screen').classList.add('hidden');
+            document.getElementById('start-coins').innerText = gameData.coins.toLocaleString();
+        });
+
+        document.getElementById('btn-pause').addEventListener('click', () => {
+            gameEngine.pause();
+        });
+
+        document.getElementById('btn-resume').addEventListener('click', () => {
+            gameEngine.resume();
+        });
+
+        document.getElementById('btn-quit').addEventListener('click', () => {
+            gameEngine.stop(false);
+            document.getElementById('pause-screen').classList.add('hidden');
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            gameEngine.start();
+        });
+
+        document.getElementById('btn-go-home').addEventListener('click', () => {
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        });
+
+        // --- [초기 진입점] ---
+        window.onload = () => {
+            loadGameData();
+            document.getElementById('start-highscore').innerText = gameData.highScore.toLocaleString();
+            document.getElementById('start-coins').innerText = gameData.coins.toLocaleString();
+        };
+
+    </script>
+</body>
+</html>
