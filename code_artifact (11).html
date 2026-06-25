@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>종합 보드게임 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 추가적인 커스텀 스타일이 필요한 경우 여기에 작성 */
+        .piece-selected {
+            box-shadow: inset 0 0 0 4px #facc15;
+            background-color: rgba(254, 240, 138, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-center font-sans antialiased">
+
+    <!-- 메뉴 화면 -->
+    <div id="view-menu" class="flex flex-col items-center py-16 px-4 w-full">
+        <div class="mb-12 text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+                종합 보드게임 센터
+            </h1>
+            <p class="text-slate-400">플레이할 게임을 선택하세요</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full">
+            <!-- 오목 -->
+            <button onclick="goToModeSelect('omok')" class="bg-slate-800 hover:bg-slate-700 p-6 rounded-2xl border border-slate-700 hover:border-blue-500 transition-all flex flex-col items-center group text-center">
+                <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                <h2 class="text-2xl font-bold mb-2">오목</h2>
+                <p class="text-slate-400 text-sm">5개의 돌을 먼저 연결하세요.</p>
+            </button>
+            <!-- 바둑 -->
+            <button onclick="goToModeSelect('baduk')" class="bg-slate-800 hover:bg-slate-700 p-6 rounded-2xl border border-slate-700 hover:border-blue-500 transition-all flex flex-col items-center group text-center">
+                <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <h2 class="text-2xl font-bold mb-2">바둑</h2>
+                <p class="text-slate-400 text-sm">집을 넓히고 상대 돌을 따내세요.</p>
+            </button>
+            <!-- 체스 -->
+            <button onclick="goToModeSelect('chess')" class="bg-slate-800 hover:bg-slate-700 p-6 rounded-2xl border border-slate-700 hover:border-blue-500 transition-all flex flex-col items-center group text-center">
+                <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                <h2 class="text-2xl font-bold mb-2">체스</h2>
+                <p class="text-slate-400 text-sm">자유 이동 모드 (베타)</p>
+            </button>
+            <!-- 장기 -->
+            <button onclick="goToModeSelect('janggi')" class="bg-slate-800 hover:bg-slate-700 p-6 rounded-2xl border border-slate-700 hover:border-blue-500 transition-all flex flex-col items-center group text-center">
+                <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <h2 class="text-2xl font-bold mb-2">장기</h2>
+                <p class="text-slate-400 text-sm">자유 이동 모드 (베타)</p>
+            </button>
+        </div>
+    </div>
+
+    <!-- 모드 선택 화면 -->
+    <div id="view-mode" class="hidden flex-col items-center justify-center p-4 w-full">
+        <h2 class="text-3xl font-bold mb-8">게임 모드 선택</h2>
+        <div class="flex flex-col sm:flex-row gap-6 max-w-xl w-full">
+            <button onclick="goToDiffSelect()" class="flex-1 bg-slate-800 hover:bg-slate-700 p-8 rounded-2xl border border-slate-700 hover:border-emerald-500 transition-all flex flex-col items-center">
+                <svg class="w-12 h-12 mb-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <span class="text-xl font-bold">1인용 (vs AI)</span>
+            </button>
+            <button onclick="startGame('pvp', 'medium')" class="flex-1 bg-slate-800 hover:bg-slate-700 p-8 rounded-2xl border border-slate-700 hover:border-blue-500 transition-all flex flex-col items-center">
+                <svg class="w-12 h-12 mb-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <span class="text-xl font-bold">2인용 (vs 친구)</span>
+            </button>
+        </div>
+        <button onclick="switchView('view-menu')" class="mt-8 text-slate-400 hover:text-white flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> 뒤로 가기
+        </button>
+    </div>
+
+    <!-- 난이도 선택 화면 -->
+    <div id="view-diff" class="hidden flex-col items-center justify-center p-4 w-full">
+        <h2 class="text-3xl font-bold mb-8">AI 난이도 선택</h2>
+        <div class="flex flex-col gap-4 max-w-sm w-full">
+            <button onclick="startGame('pve', 'easy')" class="bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 transition-all text-lg font-bold">쉬움</button>
+            <button onclick="startGame('pve', 'medium')" class="bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 transition-all text-lg font-bold">보통</button>
+            <button onclick="startGame('pve', 'hard')" class="bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 transition-all text-lg font-bold">어려움</button>
+        </div>
+        <button onclick="switchView('view-mode')" class="mt-8 text-slate-400 hover:text-white flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> 뒤로 가기
+        </button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="view-game" class="hidden flex-col items-center justify-center p-4 w-full h-full">
+        <div class="max-w-5xl w-full flex flex-col lg:flex-row gap-8 items-center lg:items-start justify-center">
+            
+            <!-- 보드 영역 -->
+            <div class="relative">
+                <div id="board-container"></div>
+                
+                <!-- 승리 오버레이 -->
+                <div id="winner-overlay" class="hidden absolute inset-0 z-50 bg-black/70 flex-col items-center justify-center rounded-sm backdrop-blur-sm">
+                    <h2 id="winner-text" class="text-4xl font-extrabold text-white mb-6 drop-shadow-lg text-center">승리!</h2>
+                    <button onclick="resetBoard()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 transition-transform hover:scale-105">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> 다시 플레이
+                    </button>
+                </div>
+            </div>
+
+            <!-- 정보 영역 -->
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 w-full max-w-sm flex flex-col gap-6">
+                <div>
+                    <h2 id="game-title" class="text-2xl font-bold mb-1 capitalize text-white">게임 이름</h2>
+                    <p id="game-mode-desc" class="text-slate-400 text-sm">모드: 2인용</p>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-xl text-center shadow-inner">
+                    <div class="text-sm text-slate-400 mb-2">현재 턴</div>
+                    <div id="turn-indicator" class="text-xl font-bold flex items-center justify-center gap-3 text-blue-400">
+                        <div id="turn-dot" class="w-4 h-4 rounded-full bg-blue-400"></div>
+                        <span id="turn-text">플레이어 1</span>
+                    </div>
+                </div>
+
+                <div id="sandbox-info" class="hidden bg-blue-900/30 text-blue-300 p-4 rounded-xl text-sm flex items-start gap-3 border border-blue-800/50">
+                    <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <p>현재 <b>자유 이동 모드</b>입니다. 기물을 선택하여 원하는 곳으로 옮기며 플레이하세요. (규칙 제약 없음)</p>
+                </div>
+
+                <div class="flex flex-col gap-3 mt-auto">
+                    <button onclick="resetBoard()" class="w-full bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> 재시작
+                    </button>
+                    <button onclick="switchView('view-menu')" class="w-full bg-transparent hover:bg-slate-700/50 text-slate-300 px-4 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 border border-slate-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> 메뉴로 나가기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 로직 -->
+    <script>
+        // --- 초기 게임 상태 정의 ---
+        const initialChessBoard = [
+            ['♜','♞','♝','♛','♚','♝','♞','♜'],
+            ['♟','♟','♟','♟','♟','♟','♟','♟'],
+            ...Array(4).fill(null).map(() => Array(8).fill(null)),
+            ['♙','♙','♙','♙','♙','♙','♙','♙'],
+            ['♖','♘','♗','♕','♔','♗','♘','♖']
+        ];
+
+        const initialJanggiBoard = [
+            ['G_車','G_馬','G_象','G_士',null,'G_士','G_象','G_馬','G_車'],
+            [null,null,null,null,'G_楚',null,null,null,null],
+            [null,'G_包',null,null,null,null,null,'G_包',null],
+            ['G_卒',null,'G_卒',null,'G_卒',null,'G_卒',null,'G_卒'],
+            Array(9).fill(null), Array(9).fill(null),
+            ['R_兵',null,'R_兵',null,'R_兵',null,'R_兵',null,'R_兵'],
+            [null,'R_包',null,null,null,null,null,'R_包',null],
+            [null,null,null,null,'R_漢',null,null,null,null],
+            ['R_車','R_象','R_馬','R_士',null,'R_士','R_馬','R_象','R_車'],
+        ];
+
+        // 앱 상태 변수
+        let appState = 'menu';
+        let gameType = null;
+        let mode = 'pvp';
+        let difficulty = 'medium';
+        let board = [];
+        let turn = 1;
+        let winner = null;
+        let selectedPiece = null;
+        let aiTimer = null;
+
+        // UI 뷰 전환 함수
+        function switchView(viewId) {
+            document.getElementById('view-menu').classList.add('hidden');
+            document.getElementById('view-menu').classList.remove('flex');
+            document.getElementById('view-mode').classList.add('hidden');
+            document.getElementById('view-mode').classList.remove('flex');
+            document.getElementById('view-diff').classList.add('hidden');
+            document.getElementById('view-diff').classList.remove('flex');
+            document.getElementById('view-game').classList.add('hidden');
+            document.getElementById('view-game').classList.remove('flex');
+
+            const target = document.getElementById(viewId);
+            target.classList.remove('hidden');
+            target.classList.add('flex');
+            appState = viewId.replace('view-', '');
+            
+            if (aiTimer) clearTimeout(aiTimer);
+        }
+
+        function goToModeSelect(type) {
+            gameType = type;
+            switchView('view-mode');
+        }
+
+        function goToDiffSelect() {
+            switchView('view-diff');
+        }
+
+        function startGame(selectedMode, selectedDiff) {
+            mode = selectedMode;
+            difficulty = selectedDiff;
+            resetBoard();
+            switchView('view-game');
+            updateGameInfo();
+        }
+
+        function resetBoard() {
+            turn = 1;
+            winner = null;
+            selectedPiece = null;
+            if (aiTimer) clearTimeout(aiTimer);
+            
+            document.getElementById('winner-overlay').classList.add('hidden');
+            document.getElementById('winner-overlay').classList.remove('flex');
+
+            if (gameType === 'omok') board = Array(15).fill(null).map(() => Array(15).fill(null));
+            else if (gameType === 'baduk') board = Array(19).fill(null).map(() => Array(19).fill(null));
+            else if (gameType === 'chess') board = initialChessBoard.map(row => [...row]);
+            else if (gameType === 'janggi') board = initialJanggiBoard.map(row => [...row]);
+
+            renderBoard();
+            updateTurnUI();
+        }
+
+        // --- 공통 & 특정 게임 로직 ---
+
+        function checkOmokWin(currentBoard, r, c, player) {
+            const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+            for (let [dr, dc] of dirs) {
+                let count = 1;
+                for (let i = 1; i <= 4; i++) {
+                    if (currentBoard[r + dr * i]?.[c + dc * i] === player) count++; else break;
+                }
+                for (let i = 1; i <= 4; i++) {
+                    if (currentBoard[r - dr * i]?.[c - dc * i] === player) count++; else break;
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
+
+        // 바둑: 돌의 활로(Liberties)와 그룹을 계산하는 함수 (AI도 룰을 이해하기 위해 독립됨)
+        function getGroupInfo(board, sr, sc, targetColor) {
+            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            const visited = new Set();
+            const group = [];
+            let liberties = 0;
+            const queue = [[sr, sc]];
+            visited.add(`${sr},${sc}`);
+
+            while (queue.length > 0) {
+                const [cr, cc] = queue.shift();
+                group.push([cr, cc]);
+                for (let [dr, dc] of dirs) {
+                    const nr = cr + dr;
+                    const nc = cc + dc;
+                    if (nr >= 0 && nr < 19 && nc >= 0 && nc < 19) {
+                        if (board[nr][nc] === null) {
+                            const libKey = `lib-${nr}-${nc}`;
+                            if (!visited.has(libKey)) {
+                                liberties++;
+                                visited.add(libKey);
+                            }
+                        }
+                        else if (board[nr][nc] === targetColor && !visited.has(`${nr},${nc}`)) {
+                            visited.add(`${nr},${nc}`);
+                            queue.push([nr, nc]);
+                        }
+                    }
+                }
+            }
+            return { group, liberties };
+        }
+
+        function handleBadukCapture(currentBoard, r, c, player) {
+            const opponent = player === 1 ? 2 : 1;
+            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            let captured = false;
+
+            // 주변 적군 포획 검사
+            for (let [dr, dc] of dirs) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 0 && nr < 19 && nc >= 0 && nc < 19 && currentBoard[nr][nc] === opponent) {
+                    const { group, liberties } = getGroupInfo(currentBoard, nr, nc, opponent);
+                    if (liberties === 0) {
+                        group.forEach(([gr, gc]) => currentBoard[gr][gc] = null);
+                        captured = true;
+                    }
+                }
+            }
+            // 자살수 검사
+            const myGroup = getGroupInfo(currentBoard, r, c, player);
+            if (myGroup.liberties === 0 && !captured) return false;
+            return true;
+        }
+
+        // --- AI 로직 ---
+        // --- AI 로직 ---
+
+        function getOmokAIMove(currentBoard, diff) {
+            const emptySpots = [];
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    if (!currentBoard[r][c]) emptySpots.push({ r, c });
+                }
+            }
+            if (emptySpots.length === 0) return null;
+            if (diff === 'easy') return emptySpots[Math.floor(Math.random() * emptySpots.length)];
+
+            const evaluateSpot = (r, c, p) => {
+                const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+                let score = 0;
+                for (let [dr, dc] of dirs) {
+                    let count = 1;
+                    let openEnds = 0;
+
+                    let i = 1;
+                    while (r + dr * i >= 0 && r + dr * i < 15 && c + dc * i >= 0 && c + dc * i < 15 && currentBoard[r + dr * i][c + dc * i] === p) { count++; i++; }
+                    if (r + dr * i >= 0 && r + dr * i < 15 && c + dc * i >= 0 && c + dc * i < 15 && currentBoard[r + dr * i][c + dc * i] === null) openEnds++;
+                    
+                    let j = 1;
+                    while (r - dr * j >= 0 && r - dr * j < 15 && c - dc * j >= 0 && c - dc * j < 15 && currentBoard[r - dr * j][c - dc * j] === p) { count++; j++; }
+                    if (r - dr * j >= 0 && r - dr * j < 15 && c - dc * j >= 0 && c - dc * j < 15 && currentBoard[r - dr * j][c - dc * j] === null) openEnds++;
+                    
+                    // 훨씬 정교해진 패턴 점수 계산
+                    if (count >= 5) score += 1000000;
+                    else if (count === 4 && openEnds === 2) score += 100000; // 양쪽이 열린 4
+                    else if (count === 4 && openEnds === 1) score += 10000;  // 한쪽만 열린 4
+                    else if (count === 3 && openEnds === 2) score += 5000;   // 양쪽이 열린 3
+                    else if (count === 3 && openEnds === 1) score += 500;
+                    else if (count === 2 && openEnds === 2) score += 100;
+                }
+                return score;
+            };
+
+            let bestMove = null;
+            let bestScore = -Infinity;
+
+            for (let { r, c } of emptySpots) {
+                let myScore = evaluateSpot(r, c, 2);
+                let oppScore = evaluateSpot(r, c, 1);
+                let totalScore = 0;
+
+                if (diff === 'hard') {
+                    // 승리와 직결된 최우선 수 방어/공격 로직
+                    if (myScore >= 1000000) totalScore = 2000000; // AI 승리 확정
+                    else if (oppScore >= 1000000) totalScore = 1500000; // 플레이어 승리 결사 방어
+                    else if (myScore >= 100000) totalScore = 120000; // AI 4목 형성
+                    else if (oppScore >= 100000) totalScore = 110000; // 플레이어 열린 4 방어
+                    else totalScore = myScore + oppScore * 1.5; // 방어를 약간 우선하는 균형 잡힌 가중치
+                } else {
+                    totalScore = myScore + oppScore;
+                }
+                
+                totalScore += Math.random() * 50; // 패턴 단조로움 방지 무작위성
+
+                if (totalScore > bestScore) {
+                    bestScore = totalScore;
+                    bestMove = { r, c };
+                }
+            }
+            return bestMove || emptySpots[0];
+        }
+
+        // 룰을 완전히 이해하는 바둑 AI 알고리즘
+        function getBadukAIMove(currentBoard, diff) {
+            const emptySpots = [];
+            for (let r = 0; r < 19; r++) {
+                for (let c = 0; c < 19; c++) {
+                    if (currentBoard[r][c] === null) {
+                        let tempBoard = currentBoard.map(row => [...row]);
+                        tempBoard[r][c] = 2;
+                        // 합법적인 수인지 (자살수 금지 등) 확인 후 후보에 추가
+                        if (handleBadukCapture(tempBoard, r, c, 2)) {
+                            emptySpots.push({ r, c });
+                        }
+                    }
+                }
+            }
+            if (emptySpots.length === 0) return null;
+            if (diff === 'easy') return emptySpots[Math.floor(Math.random() * emptySpots.length)];
+
+            let bestMove = null;
+            let bestScore = -Infinity;
+
+            for (let { r, c } of emptySpots) {
+                let tempBoard = currentBoard.map(row => [...row]);
+                
+                let oppStonesBefore = 0;
+                for(let i=0; i<19; i++) for(let j=0; j<19; j++) if(tempBoard[i][j]===1) oppStonesBefore++;
+
+                tempBoard[r][c] = 2;
+                handleBadukCapture(tempBoard, r, c, 2); // 임시 보드에 포획 실행
+
+                let oppStonesAfter = 0;
+                for(let i=0; i<19; i++) for(let j=0; j<19; j++) if(tempBoard[i][j]===1) oppStonesAfter++;
+
+                let captured = oppStonesBefore - oppStonesAfter;
+                let myInfo = getGroupInfo(tempBoard, r, c, 2);
+                
+                let score = 0;
+                
+                // 1. 상대 돌을 따낼 수 있다면 매우 높은 점수 부여
+                if (captured > 0) score += captured * 5000;
+
+                // 2. 내 돌의 활로(Liberties) 확보 및 자충수(Self-Atari) 회피
+                if (myInfo.liberties <= 1) score -= 2000; // 단수가 되는 자리는 스스로 들어가지 않음
+                else score += myInfo.liberties * 50;
+
+                // 3. 상대방의 활로를 줄이거나 단수 치기
+                const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                for (let [dr, dc] of dirs) {
+                    let nr = r + dr, nc = c + dc;
+                    if (nr>=0 && nr<19 && nc>=0 && nc<19 && currentBoard[nr][nc] === 1) {
+                        let oppInfo = getGroupInfo(tempBoard, nr, nc, 1);
+                        if (oppInfo.liberties === 1) score += 1000; // 상대방을 단수 치는 공격
+                        else score += (5 - Math.min(5, oppInfo.liberties)) * 20; // 상대방 포위 및 압박 시도
+                    }
+                }
+
+                // 4. 포석: 초반에 변/귀보다 3선, 4선을 선호하는 기본 상식
+                let distR = Math.min(r, 18 - r);
+                let distC = Math.min(c, 18 - c);
+                if (distR === 0 || distC === 0) score -= 100; // 가장자리(1선) 회피
+                if (diff === 'hard') {
+                    if ((distR === 2 || distR === 3) && (distC === 2 || distC === 3)) score += 80; // 3선, 4선 가산점
+                }
+
+                score += Math.random() * 20;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = { r, c };
+                }
+            }
+            return bestMove;
+        }
+
+        // 샌드박스용 체스/장기 공격형 AI
+        function getSandboxAIMove(currentBoard, type) {
+            const rows = currentBoard.length;
+            const cols = currentBoard[0].length;
+            const myPieces = [];
+            const emptySpots = [];
+            const enemyPieces = [];
+
+            const isMyPiece = (p) => {
+                if (!p) return false;
+                if (type === 'chess') return ['♜', '♞', '♝', '♛', '♚', '♟'].includes(p);
+                if (type === 'janggi') return p.startsWith('G_');
+                return false;
+            };
+            const isEnemyPiece = (p) => {
+                if (!p) return false;
+                if (type === 'chess') return ['♖', '♘', '♗', '♕', '♔', '♙'].includes(p);
+                if (type === 'janggi') return p.startsWith('R_');
+                return false;
+            };
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (!currentBoard[r][c]) emptySpots.push({ r, c });
+                    else if (isMyPiece(currentBoard[r][c])) myPieces.push({ r, c });
+                    else if (isEnemyPiece(currentBoard[r][c])) enemyPieces.push({ r, c });
+                }
+            }
+
+            if (myPieces.length === 0) return null;
+
+            // 어려움/보통 모드에서는 기회가 되면 적의 기물을 잡아먹으려고 시도함
+            if (difficulty !== 'easy' && enemyPieces.length > 0) {
+                let captureChance = difficulty === 'hard' ? 0.8 : 0.4;
+                if (Math.random() < captureChance) {
+                    let from = myPieces[Math.floor(Math.random() * myPieces.length)];
+                    let to = enemyPieces[Math.floor(Math.random() * enemyPieces.length)];
+                    return { from, to };
+                }
+            }
+
+            let from = myPieces[Math.floor(Math.random() * myPieces.length)];
+            let targets = emptySpots.concat(enemyPieces);
+            let to = targets[Math.floor(Math.random() * targets.length)];
+            return { from, to };
+        }
+
+        // 턴 실행
+        window.handleCellClick = function(r, c) {
+            if (winner || (mode === 'pve' && turn === 2)) return;
+            processMove(r, c, 1);
+        };
+
+        function processMove(r, c, playerTurn, fromR = null, fromC = null) {
+            if (winner) return;
+
+            if (gameType === 'omok') {
+                if (board[r][c] !== null) return;
+                board[r][c] = playerTurn;
+                if (checkOmokWin(board, r, c, playerTurn)) winner = playerTurn;
+                else turn = playerTurn === 1 ? 2 : 1;
+            } else if (gameType === 'baduk') {
+                if (board[r][c] !== null) return;
+                let boardCopy = board.map(row => [...row]);
+                boardCopy[r][c] = playerTurn;
+                if (handleBadukCapture(boardCopy, r, c, playerTurn)) {
+                    board = boardCopy;
+                    turn = playerTurn === 1 ? 2 : 1;
+                } else {
+                    return; // 자살수 무효
+                }
+            } else if (gameType === 'chess' || gameType === 'janggi') {
+                if (fromR !== null && fromC !== null) { // AI 이동
+                    board[r][c] = board[fromR][fromC];
+                    board[fromR][fromC] = null;
+                    turn = playerTurn === 1 ? 2 : 1;
+                } else { // 플레이어
+                    if (selectedPiece) {
+                        if (selectedPiece.r === r && selectedPiece.c === c) {
+                            selectedPiece = null; 
+                        } else {
+                            board[r][c] = board[selectedPiece.r][selectedPiece.c];
+                            board[selectedPiece.r][selectedPiece.c] = null;
+                            selectedPiece = null;
+                            turn = playerTurn === 1 ? 2 : 1;
+                        }
+                    } else {
+                        if (board[r][c] !== null) selectedPiece = { r, c };
+                    }
+                }
+            }
+
+            // 무승부 검사
+            let isFull = true;
+            for(let i=0; i<board.length; i++) {
+                if(board[i].includes(null)) { isFull = false; break; }
+            }
+            if (isFull && !winner && gameType !== 'chess' && gameType !== 'janggi') {
+                winner = 'draw';
+            }
+
+            renderBoard();
+            updateTurnUI();
+            checkWinner();
+            triggerAI();
+        }
+
+        function triggerAI() {
+            if (aiTimer) clearTimeout(aiTimer);
+            if (appState === 'game' && mode === 'pve' && turn === 2 && !winner) {
+                aiTimer = setTimeout(() => {
+                    if (gameType === 'omok') {
+                        const move = getOmokAIMove(board, difficulty);
+                        if (move) processMove(move.r, move.c, 2);
+                    } else if (gameType === 'baduk') {
+                        const move = getBadukAIMove(board, difficulty);
+                        if (move) processMove(move.r, move.c, 2);
+                    } else {
+                        const move = getSandboxAIMove(board, gameType);
+                        if (move) processMove(move.to.r, move.to.c, 2, move.from.r, move.from.c);
+                    }
+                }, 600);
+            }
+        }
+
+        // --- 렌더링 함수 ---
+        
+        function updateGameInfo() {
+            const titleMap = { omok: '오목', baduk: '바둑', chess: '체스', janggi: '장기' };
+            document.getElementById('game-title').innerText = titleMap[gameType];
+            
+            let diffText = difficulty === 'easy' ? '쉬움' : difficulty === 'medium' ? '보통' : '어려움';
+            document.getElementById('game-mode-desc').innerText = `모드: ${mode === 'pve' ? `1인용 (AI: ${diffText})` : '2인용'}`;
+            
+            const sandboxInfo = document.getElementById('sandbox-info');
+            if(gameType === 'chess' || gameType === 'janggi') {
+                sandboxInfo.classList.remove('hidden');
+                sandboxInfo.classList.add('flex');
+            } else {
+                sandboxInfo.classList.add('hidden');
+                sandboxInfo.classList.remove('flex');
+            }
+        }
+
+        function updateTurnUI() {
+            const turnIndicator = document.getElementById('turn-indicator');
+            const turnDot = document.getElementById('turn-dot');
+            const turnText = document.getElementById('turn-text');
+
+            if (turn === 1) {
+                turnIndicator.className = "text-xl font-bold flex items-center justify-center gap-3 text-blue-400";
+                turnDot.className = "w-4 h-4 rounded-full bg-blue-400";
+                turnText.innerText = "플레이어 1";
+            } else {
+                turnIndicator.className = "text-xl font-bold flex items-center justify-center gap-3 text-red-400";
+                turnDot.className = `w-4 h-4 rounded-full bg-red-400 ${mode === 'pve' && !winner ? 'animate-pulse' : ''}`;
+                turnText.innerText = mode === 'pve' ? "AI 대기 중..." : "플레이어 2";
+            }
+        }
+
+        function checkWinner() {
+            const overlay = document.getElementById('winner-overlay');
+            const winnerText = document.getElementById('winner-text');
+            
+            if (winner) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                
+                if (winner === 'draw') {
+                    winnerText.innerText = '무승부!';
+                } else {
+                    winnerText.innerText = `${winner === 1 ? '플레이어 1' : mode === 'pve' ? 'AI' : '플레이어 2'} 승리!`;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const container = document.getElementById('board-container');
+            container.innerHTML = '';
+            
+            if (gameType === 'omok') container.innerHTML = getGridBoardHTML(15, 15, 32, 'w-6 h-6');
+            else if (gameType === 'baduk') container.innerHTML = getGridBoardHTML(19, 19, 24, 'w-[18px] h-[18px]');
+            else if (gameType === 'chess') container.innerHTML = getChessBoardHTML();
+            else if (gameType === 'janggi') container.innerHTML = getJanggiBoardHTML();
+        }
+
+        function getGridBoardHTML(rows, cols, cellSize, pieceScale) {
+            let html = `
+                <div class="relative border-4 border-amber-900 bg-[#E2C792] shadow-2xl p-4">
+                    <div class="grid" style="grid-template-columns: repeat(${cols}, ${cellSize}px); grid-template-rows: repeat(${rows}, ${cellSize}px);">
+            `;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let hClass = c === 0 ? 'w-1/2 right-0' : c === cols - 1 ? 'w-1/2 left-0' : 'w-full';
+                    let vClass = r === 0 ? 'h-1/2 bottom-0' : r === rows - 1 ? 'h-1/2 top-0' : 'h-full';
+                    
+                    let pieceHtml = '';
+                    if (board[r][c] !== null) {
+                        let colorClass = board[r][c] === 1 ? 'bg-zinc-900' : 'bg-zinc-100';
+                        pieceHtml = `<div class="z-10 rounded-full shadow-md ${pieceScale} ${colorClass}"></div>`;
+                    }
+
+                    html += `
+                        <div class="relative flex items-center justify-center">
+                            <div class="absolute bg-black/60 pointer-events-none ${hClass} h-[1px]"></div>
+                            <div class="absolute bg-black/60 pointer-events-none ${vClass} w-[1px]"></div>
+                            ${pieceHtml}
+                            <button class="absolute inset-0 z-20 w-full h-full cursor-pointer hover:bg-black/10 rounded-full transition-colors" onclick="handleCellClick(${r}, ${c})"></button>
+                        </div>
+                    `;
+                }
+            }
+            html += `</div></div>`;
+            return html;
+        }
+
+        function getChessBoardHTML() {
+            let html = `<div class="border-8 border-gray-800 rounded-sm shadow-2xl flex flex-col">`;
+            for (let r = 0; r < 8; r++) {
+                html += `<div class="flex">`;
+                for (let c = 0; c < 8; c++) {
+                    let isDark = (r + c) % 2 === 1;
+                    let bgClass = isDark ? 'bg-emerald-700' : 'bg-emerald-100';
+                    let selectedClass = (selectedPiece && selectedPiece.r === r && selectedPiece.c === c) ? 'piece-selected' : '';
+                    let piece = board[r][c] || '';
+                    
+                    html += `
+                        <div onclick="handleCellClick(${r}, ${c})" 
+                             class="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center text-4xl sm:text-5xl cursor-pointer select-none transition-colors ${bgClass} ${selectedClass}">
+                            <span class="drop-shadow-md text-black">${piece}</span>
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            }
+            html += `</div>`;
+            return html;
+        }
+
+        function getJanggiBoardHTML() {
+            let html = `
+                <div class="relative border-4 border-amber-900 bg-[#D2A65B] shadow-2xl p-4">
+                    <div class="grid grid-cols-9" style="grid-template-rows: repeat(10, 48px); grid-auto-columns: 48px;">
+            `;
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 9; c++) {
+                    let hClass = c === 0 ? 'w-1/2 right-0' : c === 8 ? 'w-1/2 left-0' : 'w-full';
+                    let vClass = r === 0 ? 'h-1/2 bottom-0' : r === 9 ? 'h-1/2 top-0' : 'h-full';
+                    let piece = board[r][c];
+                    let pieceHtml = '';
+                    
+                    if (piece) {
+                        let isRed = piece.startsWith('R_');
+                        let colorClass = isRed ? 'text-red-700 border-red-800' : 'text-green-800 border-green-900';
+                        let char = piece.split('_')[1];
+                        pieceHtml = `
+                            <div class="z-10 w-10 h-10 rounded-full flex items-center justify-center bg-[#F3D798] border-2 shadow-sm cursor-pointer font-bold text-lg select-none ${colorClass}">
+                                ${char}
+                            </div>
+                        `;
+                    }
+
+                    let selectedClass = (selectedPiece && selectedPiece.r === r && selectedPiece.c === c) ? 'bg-yellow-400/40 ring-2 ring-yellow-500' : '';
+
+                    html += `
+                        <div class="relative flex items-center justify-center w-12 h-12">
+                            <div class="absolute bg-black/40 h-[1px] ${hClass}"></div>
+                            <div class="absolute bg-black/40 w-[1px] ${vClass}"></div>
+                            ${pieceHtml}
+                            <button class="absolute inset-0 z-20 w-full h-full cursor-pointer hover:bg-black/10 rounded-full transition-all ${selectedClass}" onclick="handleCellClick(${r}, ${c})"></button>
+                        </div>
+                    `;
+                }
+            }
+            html += `</div></div>`;
+            return html;
+        }
+
+    </script>
+</body>
+</html>
